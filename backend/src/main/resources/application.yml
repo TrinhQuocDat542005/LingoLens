@@ -1,0 +1,32 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lingolens
+    username: lingolens
+    password: ${DB_PASSWORD:lingolens_password}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+# Custom Security & JWT properties
+security:
+  jwt:
+    # Safe HS256 secret key (at least 256 bits)
+    secret-key: "lingolenssecretkeylingolenssecretkeylingolenssecretkeylingolenssecretkey"
+    # 15 minutes (in milliseconds)
+    expiration-time: 900000
+    # 7 days (in milliseconds)
+    refresh-expiration-time: 604800000
