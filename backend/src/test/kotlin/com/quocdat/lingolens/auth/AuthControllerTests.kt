@@ -157,4 +157,37 @@ class AuthControllerTests {
         mockMvc.perform(get("/api/v1/users/me"))
             .andExpect(status().isForbidden)
     }
+
+    @Test
+    fun testRegularUserCannotAccessAdminEndpoint() {
+        val email = generateRandomEmail()
+        val password = "securePassword123"
+        
+        // 1. Đăng ký tài khoản thường (mặc định nhận ROLE_USER)
+        val registerRequest = RegisterRequest(
+            email = email,
+            password = password,
+            name = "Regular User"
+        )
+        mockMvc.perform(
+            post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest))
+        ).andExpect(status().isOk)
+        // 2. Đăng nhập để lấy Access Token
+        val loginRequest = LoginRequest(email = email, password = password)
+        val loginResult = mockMvc.perform(
+            post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest))
+        ).andExpect(status().isOk).andReturn()
+        val responseBody = loginResult.response.contentAsString
+        val tokenResponse = objectMapper.readValue(responseBody, TokenResponse::class.java)
+        val accessToken = tokenResponse.accessToken
+        // 3. Dùng token user thường gọi endpoint admin -> phải bị chặn và trả về 403 Forbidden
+        mockMvc.perform(
+            get("/api/v1/admin/hello")
+                .header("Authorization", "Bearer $accessToken")
+        ).andExpect(status().isForbidden)
+    }
 }

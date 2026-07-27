@@ -65,6 +65,7 @@ class SecurityConfig(
                         "/swagger-ui.html"
                     ).permitAll()
                     .requestMatchers("/actuator/health").permitAll()
+                    .requestMatchers("/api/v1/main/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             }
             .sessionManagement { session ->
