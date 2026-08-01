@@ -3,7 +3,8 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/lingolens
+    # Docker exposes LingoLens PostgreSQL on 5433 to avoid local PostgreSQL conflicts.
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5433/lingolens}
     username: lingolens
     password: ${DB_PASSWORD:lingolens_password}
     driver-class-name: org.postgresql.Driver
@@ -24,8 +25,8 @@ spring:
 # Custom Security & JWT properties
 security:
   jwt:
-    # Safe HS256 secret key (at least 256 bits)
-    secret-key: "lingolenssecretkeylingolenssecretkeylingolenssecretkeylingolenssecretkey"
+    # Override JWT_SECRET in every deployed environment.
+    secret-key: ${JWT_SECRET:dev-only-lingolens-secret-key-change-before-production-2026}
     # 15 minutes (in milliseconds)
     expiration-time: 900000
     # 7 days (in milliseconds)

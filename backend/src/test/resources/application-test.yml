@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:lingolens;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+
+security:
+  jwt:
+    secret-key: test-only-lingolens-jwt-secret-key-at-least-32-bytes
+    expiration-time: 900000
+    refresh-expiration-time: 604800000

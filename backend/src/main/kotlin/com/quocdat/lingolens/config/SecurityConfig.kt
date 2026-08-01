@@ -1,6 +1,8 @@
 package com.quocdat.lingolens.config
 
 import com.quocdat.lingolens.security.JwtAuthenticationFilter
+import com.quocdat.lingolens.security.CustomAccessDeniedHandler
+import com.quocdat.lingolens.security.CustomAuthenticationEntryPoint
 import com.quocdat.lingolens.user.UserRepository
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -22,7 +24,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 class SecurityConfig(
     private val jwtAuthenticationFilter: JwtAuthenticationFilter,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val authenticationEntryPoint: CustomAuthenticationEntryPoint,
+    private val accessDeniedHandler: CustomAccessDeniedHandler
 ) {
 
     @Bean
@@ -57,7 +61,11 @@ class SecurityConfig(
             .csrf { it.disable() }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/api/v1/auth/**").permitAll()
+                    .requestMatchers(
+                        "/api/v1/auth/register",
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/refresh"
+                    ).permitAll()
                     .requestMatchers(
                         "/v3/api-docs/**",
                         "/v3/api-docs.yaml",
@@ -65,13 +73,17 @@ class SecurityConfig(
                         "/swagger-ui.html"
                     ).permitAll()
                     .requestMatchers("/actuator/health").permitAll()
-                    .requestMatchers("/api/v1/main/**").hasRole("ADMIN")
+                    .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             }
             .sessionManagement { session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             }
             .authenticationProvider(authenticationProvider())
+            .exceptionHandling { errors ->
+                errors.authenticationEntryPoint(authenticationEntryPoint)
+                errors.accessDeniedHandler(accessDeniedHandler)
+            }
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 
         return http.build()

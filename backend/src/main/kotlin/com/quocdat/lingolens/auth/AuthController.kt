@@ -1,47 +1,50 @@
 package com.quocdat.lingolens.auth
 
+import com.quocdat.lingolens.common.ApiResponse
+import com.quocdat.lingolens.user.UserProfileResponse
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.security.Principal
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@Tag(name = "Authentication", description = "Endpoints for user registration, login, and token management")
-class AuthController(
-    private val authService: AuthService
-) {
-
+@Tag(name = "Authentication")
+class AuthController(private val authService: AuthService) {
     @PostMapping("/register")
-    @Operation(summary = "Register a new user account")
-    fun register(@Valid @RequestBody request: RegisterRequest): ResponseEntity<Map<String, String>> {
+    @Operation(summary = "Register a new user")
+    fun register(@Valid @RequestBody request: RegisterRequest): ResponseEntity<ApiResponse<UserProfileResponse>> {
         val user = authService.register(request)
-        return ResponseEntity.ok(mapOf("message" to "User registered successfully with ID: ${user.id}"))
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.success("Registration successful", UserProfileResponse.from(user)))
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Authenticate user and return JWT tokens")
-    fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<TokenResponse> {
-        val response = authService.login(request)
-        return ResponseEntity.ok(response)
-    }
+    @Operation(summary = "Sign in and receive an access/refresh token pair")
+    fun login(@Valid @RequestBody body: LoginRequest, request: HttpServletRequest) =
+        ApiResponse.success("Login successful", authService.login(body, request.getHeader("User-Agent")))
 
     @PostMapping("/refresh")
-    @Operation(summary = "Rotate expired Access Token using Refresh Token")
-    fun refresh(@Valid @RequestBody request: RefreshTokenRequest): ResponseEntity<TokenResponse> {
-        val response = authService.refresh(request)
-        return ResponseEntity.ok(response)
-    }
+    @Operation(summary = "Rotate a refresh token and issue a new token pair")
+    fun refresh(@Valid @RequestBody body: RefreshTokenRequest, request: HttpServletRequest) =
+        ApiResponse.success("Token refreshed", authService.refresh(body, request.getHeader("User-Agent")))
 
     @PostMapping("/logout")
-    @Operation(summary = "Sign out and invalidate Refresh Token")
-    fun logout(principal: Principal?): ResponseEntity<Map<String, String>> {
-        if (principal != null) {
-            authService.logout(principal.name)
-            return ResponseEntity.ok(mapOf("message" to "Logged out successfully"))
-        }
-        return ResponseEntity.badRequest().body(mapOf("error" to "No active session found"))
+    @Operation(summary = "Revoke the current device refresh token", security = [SecurityRequirement(name = "BearerAuth")])
+    fun logout(@Valid @RequestBody body: LogoutRequest, principal: Principal): ApiResponse<Unit> {
+        authService.logout(body.refreshToken, principal.name)
+        return ApiResponse.success("Logged out successfully")
+    }
+
+    @PostMapping("/logout-all")
+    @Operation(summary = "Revoke all refresh tokens", security = [SecurityRequirement(name = "BearerAuth")])
+    fun logoutAll(principal: Principal): ApiResponse<Unit> {
+        authService.logoutAll(principal.name)
+        return ApiResponse.success("All sessions have been logged out")
     }
 }

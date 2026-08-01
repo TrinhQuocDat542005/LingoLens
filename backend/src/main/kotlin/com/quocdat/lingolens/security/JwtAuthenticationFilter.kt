@@ -26,25 +26,33 @@ class JwtAuthenticationFilter(
             filterChain.doFilter(request, response)
             return
         }
+        try{
+            val jwt = authHeader.substring(7)
+            val userEmail = jwtService.extractUsername(jwt)
 
-        val jwt = authHeader.substring(7)
-        val userEmail = jwtService.extractUsername(jwt)
-
-        if (SecurityContextHolder.getContext().authentication == null) {
-            val userDetailsOpt = userRepository.findByEmail(userEmail)
-            if (userDetailsOpt.isPresent) {
-                val userDetails = userDetailsOpt.get()
-                if (jwtService.isTokenValid(jwt, userDetails)) {
-                    val authToken = UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.authorities
-                    )
-                    authToken.details = WebAuthenticationDetailsSource().buildDetails(request)
-                    SecurityContextHolder.getContext().authentication = authToken
+            if (SecurityContextHolder.getContext().authentication == null) {
+                val userDetailsOpt = userRepository.findByEmail(userEmail)
+                if (userDetailsOpt.isPresent) {
+                    val userDetails = userDetailsOpt.get()
+                    if (jwtService.isTokenValid(jwt, userDetails)) {
+                        val authToken = UsernamePasswordAuthenticationToken(
+                         userDetails,
+                            null,
+                            userDetails.authorities
+                        )
+                        authToken.details = WebAuthenticationDetailsSource().buildDetails(request)
+                        SecurityContextHolder.getContext().authentication = authToken
+                    }
                 }
             }
+        } catch (ex: io.jsonwebtoken.ExpiredJwtException) {
+            request.setAttribute("exception_code", "TOKEN_EXPIRED")
+            request.setAttribute("exception_message", "JWT access token has expired")
+        } catch (ex: Exception) {
+            request.setAttribute("exception_code", "INVALID_TOKEN")
+            request.setAttribute("exception_message", "JWT token is invalid or malformed")
         }
+
         filterChain.doFilter(request, response)
     }
 }

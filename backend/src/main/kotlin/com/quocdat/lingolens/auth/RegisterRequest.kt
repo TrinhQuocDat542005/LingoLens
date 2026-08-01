@@ -14,5 +14,6 @@ data class RegisterRequest(
     val password: String,
 
     @field:NotBlank(message = "Name is required")
+    @field:Size(max = 100, message = "Name must not exceed 100 characters")
     val name: String
 )

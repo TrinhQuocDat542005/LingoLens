@@ -1,29 +1,29 @@
 package com.quocdat.lingolens.user
 
+import com.quocdat.lingolens.common.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.springframework.http.ResponseEntity
+import jakarta.validation.Valid
 import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/v1/users")
-@Tag(name = "User", description = "Endpoints for managing user profiles")
-class UserController {
-
+@Tag(name = "User")
+@SecurityRequirement(name = "BearerAuth")
+class UserController(private val userRepository: UserRepository) {
     @GetMapping("/me")
-    @Operation(summary = "Get current authenticated user profile", security = [SecurityRequirement(name = "BearerAuth")])
-    fun getProfile(@AuthenticationPrincipal user: User): ResponseEntity<Map<String, Any>> {
-        return ResponseEntity.ok(mapOf(
-            "id" to (user.id ?: 0L),
-            "email" to user.getEmail(),
-            "name" to user.getName(),
-            "targetLevel" to user.targetLevel,
-            "streakDays" to user.streakDays,
-            "roles" to user.roles.map { it.name }
-        ))
+    @Operation(summary = "Get the authenticated profile")
+    fun getProfile(@AuthenticationPrincipal user: User) =
+        ApiResponse.success("Profile loaded", UserProfileResponse.from(user))
+
+    @PutMapping("/me")
+    @Transactional
+    @Operation(summary = "Update the authenticated profile")
+    fun updateProfile(@AuthenticationPrincipal user: User, @Valid @RequestBody body: UpdateProfileRequest): ApiResponse<UserProfileResponse> {
+        user.updateProfile(body.name.trim(), body.targetLevel, body.dailyGoal)
+        return ApiResponse.success("Profile updated", UserProfileResponse.from(userRepository.save(user)))
     }
 }
