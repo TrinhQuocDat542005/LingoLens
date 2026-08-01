@@ -9,7 +9,11 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
+**/build/
+**/.kotlin/
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+.env
+backend/src/main/resources/application-local.yml

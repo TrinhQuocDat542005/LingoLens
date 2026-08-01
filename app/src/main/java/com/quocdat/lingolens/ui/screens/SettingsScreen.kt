@@ -9,6 +9,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,12 +20,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.quocdat.lingolens.service.FakeWordRepository
+import com.quocdat.lingolens.data.remote.dto.UserProfileDto
+import com.quocdat.lingolens.ui.auth.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(navController: NavController) {
-    val user by FakeWordRepository.currentUser.collectAsState()
+fun SettingsScreen(navController: NavController, user: UserProfileDto, authViewModel: AuthViewModel) {
     var notificationsEnabled by remember { mutableStateOf(true) }
 
     Scaffold(
@@ -45,6 +47,22 @@ fun SettingsScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(44.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(user.name, fontWeight = FontWeight.Bold)
+                        Text(user.email, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(user.roles.joinToString(), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
             // Study Settings Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -77,7 +95,7 @@ fun SettingsScreen(navController: NavController) {
                             listOf("B1", "B2").forEach { lvl ->
                                 val isSelected = user.targetLevel == lvl
                                 Button(
-                                    onClick = { FakeWordRepository.updateTargetLevel(lvl) },
+                                    onClick = { authViewModel.updateProfile(user.name, lvl, user.dailyGoal) },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                                         contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
@@ -104,7 +122,7 @@ fun SettingsScreen(navController: NavController) {
                             Text("Mục tiêu hằng ngày", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                             Text("Số từ cần học mỗi ngày", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                         }
-                        Text("${user.dailyGoalCount} từ / ngày", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("${user.dailyGoal} từ / ngày", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -185,6 +203,17 @@ fun SettingsScreen(navController: NavController) {
                     }
                 }
             }
+
+            OutlinedButton(
+                onClick = { authViewModel.logout() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Icon(Icons.Default.ExitToApp, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Đăng xuất")
+            }
+            Spacer(Modifier.height(16.dp))
         }
     }
 }

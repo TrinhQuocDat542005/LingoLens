@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
     container_name: lingolens-postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_DB: lingolens
       POSTGRES_USER: lingolens
