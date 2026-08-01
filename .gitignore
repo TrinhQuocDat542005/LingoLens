@@ -16,4 +16,5 @@
 .cxx
 local.properties
 .env
+**/google-services.json
 backend/src/main/resources/application-local.yml
