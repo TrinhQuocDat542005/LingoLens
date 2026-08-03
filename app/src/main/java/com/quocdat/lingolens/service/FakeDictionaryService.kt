@@ -4,6 +4,17 @@ import com.quocdat.lingolens.model.LearnedWord
 import java.util.UUID
 
 object FakeDictionaryService {
+    private val basicTranslations = mapOf(
+        "apple" to "quả táo", "backpack" to "ba lô", "banana" to "quả chuối",
+        "bicycle" to "xe đạp", "bird" to "con chim", "bottle" to "cái chai",
+        "bread" to "bánh mì", "cake" to "bánh ngọt", "car" to "ô tô",
+        "chair" to "cái ghế", "clock" to "đồng hồ", "computer" to "máy tính",
+        "flower" to "bông hoa", "food" to "thức ăn", "keyboard" to "bàn phím",
+        "mouse" to "chuột máy tính", "orange" to "quả cam", "pen" to "bút",
+        "phone" to "điện thoại", "plant" to "cây cảnh", "shoe" to "giày",
+        "table" to "cái bàn", "television" to "ti vi", "tree" to "cây",
+        "watch" to "đồng hồ đeo tay"
+    )
     private val fakeDatabase = mapOf(
         "cat" to LearnedWord(
             id = "",
@@ -72,13 +83,13 @@ object FakeDictionaryService {
         val template = fakeDatabase[normalized] ?: LearnedWord(
             id = "",
             word = word,
-            translation = "vật thể chưa dịch",
+            translation = basicTranslations[normalized] ?: "chưa có bản dịch",
             partOfSpeech = "Noun",
-            definition = "No mock definition available for this object.",
+            definition = "An everyday object recognized by LingoLens. A full dictionary definition will be loaded in week 5.",
             level = "B1",
             synonyms = emptyList(),
-            exampleSentence = "This is a placeholder example sentence for $word.",
-            exampleSentenceB2 = "This B2 example illustrates the usage of the word $word in academic context.",
+            exampleSentence = "I can see a $word in the picture.",
+            exampleSentenceB2 = "The $word was identified from the captured image with on-device machine learning.",
             imagePath = null
         )
         return template.copy(id = UUID.randomUUID().toString(), timestamp = System.currentTimeMillis())

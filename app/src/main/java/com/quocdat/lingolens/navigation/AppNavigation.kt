@@ -67,8 +67,18 @@ private fun MainNavigation(viewModel: AuthViewModel, profile: com.quocdat.lingol
         NavHost(navController, Screen.Home.route, Modifier.padding(padding)) {
             composable(Screen.Home.route) { HomeScreen(navController) }
             composable(Screen.Camera.route) { CameraScreen(navController) }
-            composable(Screen.Result.route, arguments = listOf(navArgument("word") { type = NavType.StringType })) {
-                ResultScreen(navController, it.arguments?.getString("word") ?: "cat")
+            composable(
+                Screen.Result.route,
+                arguments = listOf(
+                    navArgument("word") { type = NavType.StringType; defaultValue = "cat" },
+                    navArgument("imageUri") { type = NavType.StringType; nullable = true; defaultValue = null }
+                )
+            ) {
+                ResultScreen(
+                    navController = navController,
+                    word = it.arguments?.getString("word") ?: "cat",
+                    imageUri = it.arguments?.getString("imageUri")
+                )
             }
             composable(Screen.MyWords.route) { MyWordsScreen(navController) }
             composable(Screen.Stats.route) { StatsScreen(navController) }

@@ -38,6 +38,8 @@ Start the backend first, then run the Android app on an emulator. The developmen
 
 For a physical device, change the development base URL to the computer's LAN address and keep both devices on the same network. Production builds must use HTTPS.
 
+CameraX is integrated for real preview and image capture. ML Kit's bundled image-labeling model recognizes captured objects on-device and maps them to LingoLens's supported vocabulary. For the most reliable camera, flash, orientation and recognition testing, install the debug APK on a physical Android device. Captured images stay temporarily in the app cache and are not uploaded to the backend.
+
 ## Verification
 
 ```powershell

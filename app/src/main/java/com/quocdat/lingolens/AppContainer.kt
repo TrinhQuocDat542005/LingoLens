@@ -17,7 +17,8 @@ import java.util.concurrent.TimeUnit
 class AppContainer(context: Context) {
     private val gson = Gson()
     private val storage = SessionStorage(context)
-    private val baseUrl = "http://10.0.2.2:8080/"
+    // Physical test device and development computer must be on the same Wi-Fi.
+    private val baseUrl = "http://192.168.1.45:8080/"
 
     private val publicClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
