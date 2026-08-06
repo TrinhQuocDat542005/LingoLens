@@ -18,12 +18,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.quocdat.lingolens.LingoLensApplication
+import com.quocdat.lingolens.recognition.RecognitionHistoryState
+import com.quocdat.lingolens.recognition.RecognitionHistoryViewModel
 import com.quocdat.lingolens.service.FakeWordRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(navController: NavController) {
+    val context = LocalContext.current
+    val container = (context.applicationContext as LingoLensApplication).container
+    val historyViewModel: RecognitionHistoryViewModel = viewModel(factory = RecognitionHistoryViewModel.Factory(container.recognitionRepository))
+    val historyState by historyViewModel.state.collectAsState()
     val user by FakeWordRepository.currentUser.collectAsState()
     val words by FakeWordRepository.learnedWords.collectAsState()
 
@@ -98,6 +107,8 @@ fun StatsScreen(navController: NavController) {
                     }
                 }
             }
+
+            RecognitionHistoryCard(historyState, historyViewModel::refresh)
 
             // Beautiful Custom Bar Chart card
             Card(
@@ -222,6 +233,45 @@ fun StatsScreen(navController: NavController) {
             }
 
             Spacer(modifier = Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun RecognitionHistoryCard(state: RecognitionHistoryState, onRefresh: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column {
+                    Text("Lịch sử nhận diện", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Dữ liệu đã đồng bộ với máy chủ", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                TextButton(onClick = onRefresh) { Text("Làm mới") }
+            }
+            when (state) {
+                RecognitionHistoryState.Loading -> Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                is RecognitionHistoryState.Error -> {
+                    Text(state.message, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                    OutlinedButton(onClick = onRefresh) { Text("Thử lại") }
+                }
+                is RecognitionHistoryState.Ready -> {
+                    if (state.items.isEmpty()) Text("Chưa có lượt nhận diện nào.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    state.items.take(10).forEachIndexed { index, item ->
+                        if (index > 0) HorizontalDivider()
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(item.detectedLabel.replaceFirstChar { it.uppercase() }, fontWeight = FontWeight.Bold)
+                                Text("${item.engine ?: "AI"} · ${(item.confidence * 100).toInt()}% · ${item.createdAt.take(16).replace('T', ' ')}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (item.reported) AssistChip(onClick = {}, label = { Text("Đã báo cáo") })
+                        }
+                    }
+                }
+            }
         }
     }
 }

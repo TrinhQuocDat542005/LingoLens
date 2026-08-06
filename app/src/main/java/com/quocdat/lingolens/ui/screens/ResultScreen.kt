@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -78,6 +79,7 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.quocdat.lingolens.camera.CapturedImageRepository
+import com.quocdat.lingolens.LingoLensApplication
 import com.quocdat.lingolens.model.LearnedWord
 import com.quocdat.lingolens.navigation.Screen
 import com.quocdat.lingolens.recognition.RecognitionCandidate
@@ -87,6 +89,7 @@ import com.quocdat.lingolens.recognition.ImageQualityWarning
 import com.quocdat.lingolens.recognition.RecognitionResult
 import com.quocdat.lingolens.recognition.RecognitionUiState
 import com.quocdat.lingolens.recognition.RecognitionViewModel
+import com.quocdat.lingolens.recognition.RecognitionSyncState
 import com.quocdat.lingolens.recognition.SupportedVocabulary
 import com.quocdat.lingolens.service.FakeDictionaryService
 import com.quocdat.lingolens.service.FakeWordRepository
@@ -100,10 +103,13 @@ fun ResultScreen(navController: NavController, word: String, imageUri: String? =
     val context = LocalContext.current
     val uri = remember(imageUri) { imageUri?.let(Uri::parse) }
     val imageRepository = remember(context) { CapturedImageRepository(context.applicationContext) }
-    val recognitionViewModel: RecognitionViewModel = viewModel(factory = RecognitionViewModel.Factory(context))
+    val container = (context.applicationContext as LingoLensApplication).container
+    val recognitionViewModel: RecognitionViewModel = viewModel(factory = RecognitionViewModel.Factory(context, container.recognitionRepository))
     val recognitionState by recognitionViewModel.state.collectAsState()
+    val syncState by recognitionViewModel.syncState.collectAsState()
     var selectedWord by remember(imageUri) { mutableStateOf(if (uri == null) word else null) }
     var showManualPicker by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
     val learnedWord = selectedWord?.let { remember(it) { FakeDictionaryService.lookupWord(it) } }
     val imageState by produceState<CapturedBitmapState>(
         initialValue = if (uri == null) CapturedBitmapState.NotRequested else CapturedBitmapState.Loading,
@@ -172,6 +178,10 @@ fun ResultScreen(navController: NavController, word: String, imageUri: String? =
 
             learnedWord?.let { WordResultContent(it, context) }
 
+            if (recognitionState is RecognitionUiState.Success) {
+                RecognitionFeedbackCard(syncState = syncState, onReport = { showReportDialog = true })
+            }
+
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     onClick = { deleteCapturedImage(); navController.popBackStack() },
@@ -215,6 +225,66 @@ fun ResultScreen(navController: NavController, word: String, imageUri: String? =
             Spacer(Modifier.height(16.dp))
         }
     }
+
+    if (showReportDialog) {
+        CorrectionDialog(
+            initialLabel = selectedWord.orEmpty(),
+            onDismiss = { showReportDialog = false },
+            onSubmit = { expected, note ->
+                recognitionViewModel.reportCorrection(expected, note)
+                showReportDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun RecognitionFeedbackCard(syncState: RecognitionSyncState, onReport: () -> Unit) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+        Row(
+            Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    when (syncState) {
+                        RecognitionSyncState.Idle -> "Đang chuẩn bị đồng bộ…"
+                        is RecognitionSyncState.Saved -> "Đã lưu vào lịch sử nhận diện"
+                        RecognitionSyncState.Reporting -> "Đang gửi báo cáo…"
+                        RecognitionSyncState.Reported -> "Cảm ơn! Báo cáo đã được gửi"
+                        is RecognitionSyncState.SyncFailed -> syncState.message
+                    },
+                    fontSize = 12.sp,
+                    color = if (syncState is RecognitionSyncState.SyncFailed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (syncState is RecognitionSyncState.Saved) {
+                TextButton(onClick = onReport) { Text("Báo kết quả sai") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CorrectionDialog(initialLabel: String, onDismiss: () -> Unit, onSubmit: (String, String?) -> Unit) {
+    var expected by remember { mutableStateOf(initialLabel) }
+    var note by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Báo kết quả nhận diện sai") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Hãy nhập nhãn đúng để quản trị viên cải thiện dữ liệu nhận diện.")
+                OutlinedTextField(expected, { expected = it }, label = { Text("Nhãn đúng (tiếng Anh)") }, singleLine = true)
+                OutlinedTextField(note, { note = it }, label = { Text("Ghi chú (không bắt buộc)") }, minLines = 2)
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSubmit(expected.trim(), note.trim().ifBlank { null }) }, enabled = expected.isNotBlank()) { Text("Gửi báo cáo") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
+    )
 }
 
 @Composable

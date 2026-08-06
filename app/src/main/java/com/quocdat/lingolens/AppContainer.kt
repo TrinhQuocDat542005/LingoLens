@@ -7,7 +7,9 @@ import com.quocdat.lingolens.data.remote.AuthInterceptor
 import com.quocdat.lingolens.data.remote.TokenAuthenticator
 import com.quocdat.lingolens.data.remote.api.AuthApi
 import com.quocdat.lingolens.data.remote.api.UserApi
+import com.quocdat.lingolens.data.remote.api.RecognitionApi
 import com.quocdat.lingolens.data.repository.AuthRepository
+import com.quocdat.lingolens.data.repository.RecognitionRepository
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -54,6 +56,11 @@ class AppContainer(context: Context) {
         authApi = authenticatedRetrofit.create(AuthApi::class.java),
         userApi = authenticatedRetrofit.create(UserApi::class.java),
         storage = storage,
+        gson = gson
+    )
+
+    val recognitionRepository = RecognitionRepository(
+        api = authenticatedRetrofit.create(RecognitionApi::class.java),
         gson = gson
     )
 }

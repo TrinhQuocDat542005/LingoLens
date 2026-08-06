@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.Instant
 import java.util.Optional
+import com.quocdat.lingolens.user.User
 
 interface VocabularyRepository : JpaRepository<Vocabulary, Long> {
     fun existsByWordIgnoreCase(word: String): Boolean
@@ -21,10 +22,13 @@ interface VocabularyRepository : JpaRepository<Vocabulary, Long> {
 
 interface RecognitionHistoryRepository : JpaRepository<RecognitionHistory, Long> {
     fun countByCreatedAtAfter(since: Instant): Long
+    fun findByIdAndUser(id: Long, user: User): Optional<RecognitionHistory>
+    fun findAllByUser(user: User, pageable: Pageable): Page<RecognitionHistory>
 }
 
 interface RecognitionReportRepository : JpaRepository<RecognitionReport, Long> {
     fun countByResolvedFalse(): Long
+    fun existsByHistory(history: RecognitionHistory): Boolean
     @Query("select r from RecognitionReport r where (:resolved is null or r.resolved = :resolved)")
     fun search(@Param("resolved") resolved: Boolean?, pageable: Pageable): Page<RecognitionReport>
 }

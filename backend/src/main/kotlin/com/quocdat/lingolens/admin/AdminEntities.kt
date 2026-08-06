@@ -38,6 +38,7 @@ class RecognitionHistory(
 class RecognitionReport(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "user_id", nullable = false) var user: User,
+    @OneToOne(fetch = FetchType.LAZY) @JoinColumn(name = "recognition_history_id", unique = true) var history: RecognitionHistory? = null,
     @Column(name = "expected_label", nullable = false) var expectedLabel: String,
     @Column(name = "actual_label", nullable = false) var actualLabel: String,
     var confidence: Float? = null,
