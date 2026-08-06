@@ -1,0 +1,11 @@
+test_id,device,object_classes,lighting,background,expected_count,detected_labels,top_confidence,inference_ms,correct,notes
+1,,cat,good,simple,1,,,,,
+2,,dog,good,simple,1,,,,,
+3,,book,good,simple,1,,,,,
+4,,cup,good,simple,1,,,,,
+5,,laptop|mouse|keyboard,good,office,3,,,,,
+6,,bottle|cup,good,table,2,,,,,
+7,,apple|banana|orange,good,table,3,,,,,
+8,,phone,low_light,complex,1,,,,,
+9,,chair|couch,good,room,2,,,,,
+10,,unsupported_object,good,simple,0,,,,,

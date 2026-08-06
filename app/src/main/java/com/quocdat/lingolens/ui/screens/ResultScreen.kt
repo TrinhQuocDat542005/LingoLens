@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -56,13 +57,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -70,6 +81,9 @@ import com.quocdat.lingolens.camera.CapturedImageRepository
 import com.quocdat.lingolens.model.LearnedWord
 import com.quocdat.lingolens.navigation.Screen
 import com.quocdat.lingolens.recognition.RecognitionCandidate
+import com.quocdat.lingolens.recognition.BoundingBoxMapper
+import com.quocdat.lingolens.recognition.ImageQuality
+import com.quocdat.lingolens.recognition.ImageQualityWarning
 import com.quocdat.lingolens.recognition.RecognitionResult
 import com.quocdat.lingolens.recognition.RecognitionUiState
 import com.quocdat.lingolens.recognition.RecognitionViewModel
@@ -136,7 +150,13 @@ fun ResultScreen(navController: NavController, word: String, imageUri: String? =
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            CapturedImageCard(imageState, uri != null)
+            CapturedImageCard(
+                state = imageState,
+                hasImage = uri != null,
+                result = (recognitionState as? RecognitionUiState.Success)?.result,
+                selectedWord = selectedWord,
+                onSelect = { selectedWord = it }
+            )
 
             if (uri != null) {
                 RecognitionSection(
@@ -198,21 +218,90 @@ fun ResultScreen(navController: NavController, word: String, imageUri: String? =
 }
 
 @Composable
-private fun CapturedImageCard(state: CapturedBitmapState, hasImage: Boolean) {
+private fun CapturedImageCard(
+    state: CapturedBitmapState,
+    hasImage: Boolean,
+    result: RecognitionResult?,
+    selectedWord: String?,
+    onSelect: (String) -> Unit
+) {
     if (!hasImage) return
     Card(Modifier.fillMaxWidth().aspectRatio(4f / 3f), shape = RoundedCornerShape(24.dp)) {
         when (state) {
-            is CapturedBitmapState.Ready -> Image(
-                bitmap = state.bitmap.asImageBitmap(),
-                contentDescription = "Ảnh vật thể vừa chụp",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+            is CapturedBitmapState.Ready -> DetectionImage(
+                bitmap = state.bitmap,
+                result = result,
+                selectedWord = selectedWord,
+                onSelect = onSelect
             )
             CapturedBitmapState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
             else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Không thể đọc ảnh. Hãy chụp lại.", Modifier.padding(24.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetectionImage(
+    bitmap: Bitmap,
+    result: RecognitionResult?,
+    selectedWord: String?,
+    onSelect: (String) -> Unit
+) {
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    val candidates = result?.candidates?.filter { it.boundingBox != null }.orEmpty()
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = "Ảnh và các vật thể đã phát hiện",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
+        Canvas(
+            Modifier.matchParentSize().onSizeChanged { canvasSize = it }.pointerInput(
+                candidates, canvasSize, result?.imageWidth, result?.imageHeight
+            ) {
+                detectTapGestures { tap ->
+                    val current = result ?: return@detectTapGestures
+                    val point = BoundingBoxMapper.toImagePoint(
+                        tap.x, tap.y, current.imageWidth.toFloat(), current.imageHeight.toFloat(),
+                        canvasSize.width.toFloat(), canvasSize.height.toFloat()
+                    )
+                    candidates.filter { it.boundingBox?.contains(point.first, point.second) == true }
+                        .minByOrNull { it.boundingBox?.area ?: Float.MAX_VALUE }
+                        ?.let { onSelect(it.word) }
+                }
+            }
+        ) {
+            val current = result ?: return@Canvas
+            candidates.forEachIndexed { index, candidate ->
+                val source = candidate.boundingBox ?: return@forEachIndexed
+                val mapped = BoundingBoxMapper.toCanvas(
+                    source, current.imageWidth.toFloat(), current.imageHeight.toFloat(), size.width, size.height
+                )
+                val selected = candidate.word == selectedWord
+                val color = if (selected) Color(0xFF22C55E) else BOX_COLORS[index % BOX_COLORS.size]
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(mapped.left, mapped.top),
+                    size = Size(mapped.right - mapped.left, mapped.bottom - mapped.top),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(10f, 10f),
+                    style = Stroke(width = if (selected) 7f else 4f)
+                )
+                drawContext.canvas.nativeCanvas.drawText(
+                    "${candidate.word} ${candidate.confidence.asPercent()}",
+                    mapped.left.coerceAtLeast(8f),
+                    (mapped.top - 10f).coerceAtLeast(28f),
+                    android.graphics.Paint().apply {
+                        this.color = color.toArgb()
+                        textSize = 28f
+                        isFakeBoldText = true
+                        setShadowLayer(5f, 1f, 1f, android.graphics.Color.BLACK)
+                    }
+                )
             }
         }
     }
@@ -240,7 +329,7 @@ private fun RecognitionSection(
                     Text("Ảnh đã sẵn sàng", fontSize = 21.sp, fontWeight = FontWeight.Bold)
                     Text("Nhận diện chạy trực tiếp trên thiết bị và không tải ảnh lên máy chủ.")
                     Button(onClick = onAnalyze, modifier = Modifier.fillMaxWidth()) {
-                        Text("Phân tích bằng ML Kit")
+                        Text("Phân tích bằng EfficientDet")
                     }
                 }
                 RecognitionUiState.Loading -> {
@@ -249,7 +338,7 @@ private fun RecognitionSection(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text("Đang nhận diện…", fontWeight = FontWeight.Bold)
-                            Text("Phân tích nhãn và độ tin cậy", fontSize = 13.sp)
+                            Text("Tìm nhiều vật thể và bounding box", fontSize = 13.sp)
                         }
                     }
                 }
@@ -261,6 +350,7 @@ private fun RecognitionSection(
                 is RecognitionUiState.NoMatch -> {
                     Text("Chưa tìm thấy vật thể phù hợp", fontWeight = FontWeight.Bold, fontSize = 19.sp)
                     Text("AI chưa ghép được ảnh với bộ từ vựng LingoLens. Hãy chọn từ thủ công hoặc chụp lại rõ hơn.")
+                    ImageQualityPanel(state.imageQuality, state.inferenceTimeMs)
                     RawLabels(state.rawLabels)
                 }
                 is RecognitionUiState.Error -> {
@@ -297,6 +387,13 @@ private fun RecognitionCandidates(
         color = if (result.needsConfirmation) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary
     )
     Text("Kết quả tốt nhất: ${primary.word.uppercase()} · ${primary.confidence.asPercent()}")
+    Text(
+        "${result.candidates.size} vật thể · ${result.inferenceTimeMs} ms · " +
+            if (result.engine.name == "EFFICIENTDET") "EfficientDet-Lite0" else "ML Kit fallback",
+        fontSize = 12.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    ImageQualityPanel(result.imageQuality, result.inferenceTimeMs)
     Text("Chọn kết quả đúng:", fontSize = 13.sp)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         result.candidates.forEach { candidate ->
@@ -310,6 +407,30 @@ private fun RecognitionCandidates(
         }
     }
     RawLabels(result.rawLabels)
+}
+
+@Composable
+private fun ImageQualityPanel(quality: ImageQuality?, inferenceTimeMs: Long) {
+    if (quality == null) return
+    val warnings = quality.warnings.map {
+        when (it) {
+            ImageQualityWarning.TOO_DARK -> "Ảnh quá tối"
+            ImageQualityWarning.TOO_BRIGHT -> "Ảnh bị dư sáng"
+            ImageQualityWarning.BLURRY -> "Ảnh có thể bị mờ"
+        }
+    }
+    if (warnings.isNotEmpty()) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+            Text(
+                warnings.joinToString(" • ") + ". Nên chụp lại để tăng độ chính xác.",
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                fontSize = 13.sp
+            )
+        }
+    } else if (inferenceTimeMs > 0) {
+        Text("Chất lượng ảnh đạt yêu cầu", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+    }
 }
 
 @Composable
@@ -393,6 +514,11 @@ private fun WordResultContent(learnedWord: LearnedWord, context: Context) {
 }
 
 private fun Float.asPercent(): String = "${(this * 100).toInt()}%"
+
+private val BOX_COLORS = listOf(
+    Color(0xFF38BDF8), Color(0xFFF59E0B), Color(0xFFF472B6),
+    Color(0xFFA78BFA), Color(0xFF2DD4BF), Color(0xFFFB7185)
+)
 
 private fun decodeOrientedBitmap(context: Context, uri: Uri): Bitmap? {
     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }

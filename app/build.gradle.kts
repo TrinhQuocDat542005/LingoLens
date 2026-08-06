@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.exifinterface)
     implementation(libs.google.mlkit.image.labeling)
+    implementation(libs.google.mediapipe.tasks.vision)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

@@ -18,6 +18,8 @@ class SupportedVocabularyTest {
         assertEquals("phone", SupportedVocabulary.canonicalWord("Mobile phone"))
         assertEquals("cup", SupportedVocabulary.canonicalWord("Mug"))
         assertEquals("computer", SupportedVocabulary.canonicalWord("Personal computer"))
+        assertEquals("phone", SupportedVocabulary.canonicalWord("cell phone"))
+        assertEquals("table", SupportedVocabulary.canonicalWord("dining table"))
     }
 
     @Test

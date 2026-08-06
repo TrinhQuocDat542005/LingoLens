@@ -23,7 +23,11 @@ class RecognitionViewModel(
             runCatching { recognitionService.recognize(uri) }
                 .onSuccess { result ->
                     _state.value = if (result.candidates.isEmpty()) {
-                        RecognitionUiState.NoMatch(result.rawLabels)
+                        RecognitionUiState.NoMatch(
+                            rawLabels = result.rawLabels,
+                            imageQuality = result.imageQuality,
+                            inferenceTimeMs = result.inferenceTimeMs
+                        )
                     } else {
                         RecognitionUiState.Success(result)
                     }

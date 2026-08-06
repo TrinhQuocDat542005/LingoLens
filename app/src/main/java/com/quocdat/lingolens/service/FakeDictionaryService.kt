@@ -7,9 +7,9 @@ object FakeDictionaryService {
     private val basicTranslations = mapOf(
         "apple" to "quả táo", "backpack" to "ba lô", "banana" to "quả chuối",
         "bicycle" to "xe đạp", "bird" to "con chim", "bottle" to "cái chai",
-        "bread" to "bánh mì", "cake" to "bánh ngọt", "car" to "ô tô",
+        "bread" to "bánh mì", "bowl" to "cái tô", "cake" to "bánh ngọt", "car" to "ô tô",
         "chair" to "cái ghế", "clock" to "đồng hồ", "computer" to "máy tính",
-        "flower" to "bông hoa", "food" to "thức ăn", "keyboard" to "bàn phím",
+        "couch" to "ghế sofa", "bed" to "cái giường", "flower" to "bông hoa", "food" to "thức ăn", "keyboard" to "bàn phím",
         "mouse" to "chuột máy tính", "orange" to "quả cam", "pen" to "bút",
         "phone" to "điện thoại", "plant" to "cây cảnh", "shoe" to "giày",
         "table" to "cái bàn", "television" to "ti vi", "tree" to "cây",
