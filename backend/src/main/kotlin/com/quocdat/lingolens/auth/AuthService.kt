@@ -12,8 +12,7 @@ import com.quocdat.lingolens.security.RoleRepository
 import com.quocdat.lingolens.user.User
 import com.quocdat.lingolens.user.UserRepository
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.security.authentication.AuthenticationManager
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -29,7 +28,6 @@ class AuthService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val passwordEncoder: PasswordEncoder,
     private val jwtService: JwtService,
-    private val authenticationManager: AuthenticationManager,
     @Value("\${security.jwt.expiration-time}") private val accessExpirationTime: Long,
     @Value("\${security.jwt.refresh-expiration-time}") private val refreshExpirationTime: Long
 ) {
@@ -54,8 +52,10 @@ class AuthService(
     @Transactional
     fun login(request: LoginRequest, deviceInfo: String?): TokenResponse {
         val email = request.email.trim().lowercase()
-        authenticationManager.authenticate(UsernamePasswordAuthenticationToken(email, request.password))
-        val user = userRepository.findByEmail(email).orElseThrow { UserNotFoundException("User not found") }
+        val user = userRepository.findByEmail(email).orElseThrow { BadCredentialsException("Invalid credentials") }
+        if (!passwordEncoder.matches(request.password, user.password)) {
+            throw BadCredentialsException("Invalid credentials")
+        }
         if (!user.enabled) throw AccountDisabledException("This account has been disabled")
         return issueTokenPair(user, deviceInfo)
     }

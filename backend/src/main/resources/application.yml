@@ -31,3 +31,9 @@ security:
     expiration-time: 900000
     # 7 days (in milliseconds)
     refresh-expiration-time: 604800000
+
+app:
+  admin:
+    bootstrap:
+      email: ${ADMIN_EMAIL:}
+      password: ${ADMIN_PASSWORD:}

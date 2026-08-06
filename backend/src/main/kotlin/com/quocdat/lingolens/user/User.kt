@@ -5,6 +5,7 @@ import jakarta.persistence.*
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
+import java.time.Instant
 
 @Entity
 @Table(name = "users")
@@ -34,6 +35,12 @@ class User(
     @Column(nullable = false)
     var enabled: Boolean = true,
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    var createdAt: Instant = Instant.now(),
+
+    @Column(name = "updated_at", nullable = false)
+    var updatedAt: Instant = Instant.now(),
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_roles",
@@ -52,10 +59,15 @@ class User(
     
     fun getEmail(): String = email
     fun getName(): String = name
+    fun updatePassword(encodedPassword: String) {
+        password = encodedPassword
+        updatedAt = Instant.now()
+    }
     fun updateProfile(name: String, targetLevel: String, dailyGoal: Int) {
         this.name = name
         this.targetLevel = targetLevel
         this.dailyGoal = dailyGoal
+        this.updatedAt = Instant.now()
     }
 
     override fun isAccountNonExpired(): Boolean = true
