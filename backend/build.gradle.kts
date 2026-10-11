@@ -8,6 +8,7 @@ plugins {
 
 group = "com.quocdat.lingolens"
 kotlin.sourceSets.getByName("main").kotlin.srcDir("../shared/src/main/kotlin")
+sourceSets.getByName("test").resources.srcDir("../shared/src/test/resources")
 version = "1.0.0"
 
 springBoot {

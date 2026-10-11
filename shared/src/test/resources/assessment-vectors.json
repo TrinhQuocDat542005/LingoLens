@@ -1,0 +1,8 @@
+[
+  {"weights":[1,1,1,1,1,1,1,1,1,1],"correct":7,"percent":70,"passed":true},
+  {"weights":[1,1,1,1,1,1,1,1,1,1],"correct":6,"percent":60,"passed":false},
+  {"weights":[1,1,1,1,1,1,1,1],"correct":6,"percent":75,"passed":true},
+  {"weights":[1,1,1,1,1,1,1,1],"correct":5,"percent":62,"passed":false},
+  {"weights":[10,6,7],"correct":2,"percent":69,"passed":false},
+  {"weights":[5,5,3],"correct":2,"percent":76,"passed":true}
+]

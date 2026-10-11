@@ -65,6 +65,7 @@ android {
     }
     testOptions { unitTests.isIncludeAndroidResources = true }
     sourceSets.getByName("test").resources.srcDir("schemas")
+    sourceSets.getByName("test").resources.srcDir("../shared/src/test/resources")
     sourceSets.getByName("main").kotlin.directories.add("../shared/src/main/kotlin")
 }
 

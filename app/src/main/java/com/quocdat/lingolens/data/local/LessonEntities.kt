@@ -33,6 +33,8 @@ interface LessonDao {
     @Insert suspend fun insertPack(pack: ContentPack)
     @Query("SELECT * FROM ContentPack WHERE accountId=:accountId AND revisionId=:revisionId AND complete=1")
     suspend fun pack(accountId: Long, revisionId: String): ContentPack?
+    @Query("SELECT * FROM ContentPack WHERE accountId=:accountId AND courseId=:courseId AND complete=1 ORDER BY downloadedAt DESC, revisionId")
+    suspend fun completePacks(accountId: Long, courseId: String): List<ContentPack>
     @Upsert suspend fun saveSession(session: LessonSession)
     @Query("SELECT * FROM LessonSession WHERE accountId=:accountId AND id=:id")
     suspend fun session(accountId: Long, id: String): LessonSession?
