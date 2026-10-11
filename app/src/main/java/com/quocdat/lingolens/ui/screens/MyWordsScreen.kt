@@ -71,6 +71,7 @@ fun MyWordsScreen(navController: NavController) {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            com.quocdat.lingolens.ui.learning.SyncStatusCard()
             // Search Bar
             OutlinedTextField(
                 value = searchQuery,

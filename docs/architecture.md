@@ -14,7 +14,7 @@ The shared catalog contains published vocabulary only. A full refresh stages all
 
 Learning statistics use first-save events and local calendar dates. The total library count changes on deletion; historical daily counts do not. Pronunciation uses the device TTS engine, checks English language availability, stops on lifecycle pause and shuts down when its composition is disposed.
 
-Session restoration caches a matching profile after successful server calls and uses it only on network failures. HTTP authentication rejection clears the session; transient refresh transport failures do not. Tokens, profiles and the learning database are excluded from backup and device transfer. Local data remains after logout so the same account can recover its library on the same installation; uninstalling removes it.
+Session restoration caches a matching profile after successful server calls and uses it only on network failures. HTTP authentication rejection clears the session; transient refresh transport failures do not. Tokens, profiles and the learning database are excluded from backup and device transfer. Local data remains after logout so the same account can recover its library on the same installation; uninstalling removes local files; successfully synchronized learning data can be restored after signing in again.
 
 ## Separate builds in a monorepo
 
@@ -32,7 +32,7 @@ References: [Spring configuration](https://docs.spring.io/spring-boot/3.5/refere
 
 The JWT filter verifies tokens and loads the current database user. Disabled users receive HTTP 401 / `ACCOUNT_DISABLED`; role changes affect authorization without waiting for token expiry. Admin disabling also revokes outstanding refresh tokens.
 
-Refresh tokens are stored as SHA-256 hashes and rotated. Logout revokes refresh tokens; an already issued access token otherwise remains valid until expiry while the account is enabled. Re-enabling an account can make an unexpired access token usable again. Permanent access-token revocation and concurrent refresh coordination are future decisions.
+Refresh tokens are stored as SHA-256 hashes and rotated. Logout revokes refresh tokens; an already issued access token otherwise remains valid until expiry while the account is enabled. Re-enabling an account can make an unexpired access token usable again. Android coordinates refresh attempts and compares the current session before saving rotated credentials or clearing a rejected session. Permanent access-token revocation remains a future decision.
 
 JWT key length is checked at startup. The public example development secret is for local use only.
 
@@ -45,6 +45,16 @@ JWT key length is checked at startup. The public example development secret is f
 - Compose CI: image build, database readiness, migrations and API health.
 - Physical device: permissions/orientation, selecting boxes, lifecycle and model quality. JVM tests do not replace these checks.
 
+## Durable synchronization
+
+Room v2 adds a FIFO outbox and per-account sync metadata through a non-destructive migration. Save/delete and upload intent commit together. Recognition and corrections queue metadata locally; images remain on-device. Startup/session recovery and WorkManager connected jobs drain the current account only, using stable UUIDs and exponential retry. Periodic jobs cover the gap between a Room commit and WorkManager enqueue.
+
+The sync API checks expected account identity before effects or reads. Each account's mutation transaction locks its user row, applies the effect and stores a payload hash/receipt. This serializes concurrent duplicate requests; failed transactions leave neither receipt nor effect. Recognition corrections depend on an already acknowledged recognition UUID. Receipts and deletion tombstones have no automatic expiry, preserving replay safety.
+
+After draining, the client downloads the account's complete learning snapshot and merges it in one Room transaction. Words with a new local operation during download are protected. First-learning timestamps merge to the earliest date; save/delete conflicts use server arrival order. This is explicit eventual consistency, with no version-vector or manual merge UI. See [sync protocol](sync-protocol.md).
+
+References: [Android offline-first guidance](https://developer.android.com/topic/architecture/data-layer/offline-first), [WorkManager versions](https://developer.android.com/jetpack/androidx/releases/work) and [unique work policies](https://developer.android.com/reference/androidx/work/ExistingWorkPolicy).
+
 ## Next milestone
 
-Use a local database as Android's read source, record learning operations locally and drain an account-scoped outbox through persistent background work. Stable operation IDs prevent duplicate events on retries. Reference: [Android offline-first guidance](https://developer.android.com/topic/architecture/data-layer/offline-first).
+Spaced repetition, due-review scheduling, retention statistics and physical-device failure testing.

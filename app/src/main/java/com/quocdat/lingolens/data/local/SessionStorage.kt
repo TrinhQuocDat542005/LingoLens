@@ -13,7 +13,7 @@ private val Context.sessionDataStore by preferencesDataStore("secure_session")
 
 data class StoredSession(val accessToken: String, val refreshToken: String, val email: String, val name: String)
 
-class SessionStorage(private val context: Context) {
+class SessionStorage(private val context: Context) : CredentialStore {
     private val cipher = TokenCipher()
     private object Keys {
         val access = stringPreferencesKey("access_token")
@@ -34,7 +34,7 @@ class SessionStorage(private val context: Context) {
         )
     }
 
-    suspend fun current(): StoredSession? = session.first()
+    override suspend fun current(): StoredSession? = session.first()
 
     suspend fun save(tokens: TokenDto) {
         context.sessionDataStore.edit {
@@ -52,7 +52,7 @@ class SessionStorage(private val context: Context) {
         }
     }
 
-    suspend fun cachedProfile(): com.quocdat.lingolens.data.remote.dto.UserProfileDto? {
+    override suspend fun cachedProfile(): com.quocdat.lingolens.data.remote.dto.UserProfileDto? {
         val prefs = context.sessionDataStore.data.first()
         return prefs[Keys.profile]?.let {
             runCatching { com.google.gson.Gson().fromJson(it, com.quocdat.lingolens.data.remote.dto.UserProfileDto::class.java) }.getOrNull()
@@ -60,4 +60,22 @@ class SessionStorage(private val context: Context) {
     }
 
     suspend fun clear() = context.sessionDataStore.edit { it.clear() }
+
+    override suspend fun saveRefreshed(expected: StoredSession, tokens: TokenDto): Boolean {
+        var saved = false
+        context.sessionDataStore.edit {
+            if (it[Keys.refresh]?.let(cipher::decrypt) == expected.refreshToken && it[Keys.email] == expected.email) {
+                require(tokens.email == expected.email)
+                it[Keys.access] = cipher.encrypt(tokens.accessToken)
+                it[Keys.refresh] = cipher.encrypt(tokens.refreshToken)
+                saved = true
+            }
+        }
+        return saved
+    }
+    override suspend fun clearIfCurrent(expected: StoredSession) {
+        context.sessionDataStore.edit {
+            if (it[Keys.refresh]?.let(cipher::decrypt) == expected.refreshToken && it[Keys.email] == expected.email) it.clear()
+        }
+    }
 }

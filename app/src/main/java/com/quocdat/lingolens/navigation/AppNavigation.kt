@@ -35,6 +35,7 @@ fun AppNavigation() {
         SessionState.Loading -> SplashScreen()
         SessionState.SignedOut -> AuthNavigation(authViewModel)
         is SessionState.SignedIn -> key(session.profile.id) {
+            LaunchedEffect(session.profile.id) { application.container.syncScheduler.resume(session.profile.id) }
             CompositionLocalProvider(com.quocdat.lingolens.ui.learning.LocalLearningSession provides
                 com.quocdat.lingolens.ui.learning.LearningSession(application.container, session.profile)) {
                 MainNavigation(authViewModel, session.profile)

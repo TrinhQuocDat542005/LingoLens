@@ -20,7 +20,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import java.io.IOException
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28])
+@Config(sdk = [28], application = android.app.Application::class)
 class LearningRepositoryTest {
     private lateinit var db: LearningDatabase
     private lateinit var repository: LearningRepository

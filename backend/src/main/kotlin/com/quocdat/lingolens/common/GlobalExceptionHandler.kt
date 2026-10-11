@@ -12,7 +12,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.web.server.ResponseStatusException::class)
     fun handleStatus(ex: org.springframework.web.server.ResponseStatusException) =
-        ResponseEntity.status(ex.statusCode).body(ApiError(code = "VOCABULARY_NOT_FOUND", message = ex.reason ?: "Request failed"))
+        ResponseEntity.status(ex.statusCode).body(ApiError(code = when (ex.statusCode.value()) {
+            404 -> "VOCABULARY_NOT_FOUND"
+            409 -> "SYNC_CONFLICT"
+            403 -> "ACCOUNT_MISMATCH"
+            else -> "REQUEST_ERROR"
+        }, message = ex.reason ?: "Request failed"))
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidationExceptions(ex: MethodArgumentNotValidException): ResponseEntity<ApiError> {

@@ -106,7 +106,7 @@ fun ResultScreen(navController: NavController, word: String, imageUri: String? =
     val uri = remember(imageUri) { imageUri?.let(Uri::parse) }
     val imageRepository = remember(context) { CapturedImageRepository(context.applicationContext) }
     val container = (context.applicationContext as LingoLensApplication).container
-    val recognitionViewModel: RecognitionViewModel = viewModel(factory = RecognitionViewModel.Factory(context, container.recognitionRepository))
+    val recognitionViewModel: RecognitionViewModel = viewModel(factory = RecognitionViewModel.Factory(context, container.recognitionRepository, LocalLearningSession.current.profile.id))
     val recognitionState by recognitionViewModel.state.collectAsState()
     val syncState by recognitionViewModel.syncState.collectAsState()
     var selectedWord by remember(imageUri) { mutableStateOf(if (uri == null) word else null) }
@@ -282,16 +282,16 @@ private fun RecognitionFeedbackCard(syncState: RecognitionSyncState, onReport: (
                 Text(
                     when (syncState) {
                         RecognitionSyncState.Idle -> "Đang chuẩn bị đồng bộ…"
-                        is RecognitionSyncState.Saved -> "Đã lưu vào lịch sử nhận diện"
-                        RecognitionSyncState.Reporting -> "Đang gửi báo cáo…"
-                        RecognitionSyncState.Reported -> "Cảm ơn! Báo cáo đã được gửi"
+                        RecognitionSyncState.Queued -> "Đã lưu trên thiết bị; lịch sử sẽ tự đồng bộ khi có mạng"
+                        RecognitionSyncState.Reporting -> "Đang lưu báo cáo…"
+                        RecognitionSyncState.ReportQueued -> "Báo cáo đã vào hàng đợi; sẽ tự gửi khi có mạng"
                         is RecognitionSyncState.SyncFailed -> syncState.message
                     },
                     fontSize = 12.sp,
                     color = if (syncState is RecognitionSyncState.SyncFailed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (syncState is RecognitionSyncState.Saved) {
+            if (syncState == RecognitionSyncState.Queued) {
                 TextButton(onClick = onReport) { Text("Báo kết quả sai") }
             }
         }

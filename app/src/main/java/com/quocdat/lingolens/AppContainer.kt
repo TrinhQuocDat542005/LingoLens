@@ -17,9 +17,13 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 class AppContainer(context: Context) {
+    suspend fun resumeStoredSync() { storage.cachedProfile()?.id?.let(syncScheduler::resume) }
     private val learningDatabase = androidx.room.Room.databaseBuilder(context.applicationContext,
-        com.quocdat.lingolens.data.local.LearningDatabase::class.java, "learning.db").build()
-    val learningRepository = com.quocdat.lingolens.data.repository.LearningRepository(learningDatabase)
+        com.quocdat.lingolens.data.local.LearningDatabase::class.java, "learning.db")
+        .addMigrations(com.quocdat.lingolens.data.local.LearningDatabase.MIGRATION_1_2).build()
+    val syncScheduler = com.quocdat.lingolens.sync.SyncScheduler(context)
+    val learningRepository = com.quocdat.lingolens.data.repository.LearningRepository(learningDatabase, onCommitted = syncScheduler::schedule)
+    val syncDatabase get() = learningDatabase
     private val gson = Gson()
     private val storage = SessionStorage(context)
     private val baseUrl = BuildConfig.API_BASE_URL
@@ -63,9 +67,14 @@ class AppContainer(context: Context) {
 
     val recognitionRepository = RecognitionRepository(
         api = authenticatedRetrofit.create(RecognitionApi::class.java),
-        gson = gson
+        gson = gson,
+        db = learningDatabase,
+        schedule = syncScheduler::schedule
     )
     val vocabularyRepository = com.quocdat.lingolens.data.repository.VocabularyRepository(
         authenticatedRetrofit.create(com.quocdat.lingolens.data.repository.VocabularyApi::class.java),
         learningDatabase, learningRepository)
+    val syncEngine = com.quocdat.lingolens.sync.SyncEngine(learningDatabase,
+        authenticatedRetrofit.create(com.quocdat.lingolens.sync.SyncApi::class.java),
+        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id })
 }

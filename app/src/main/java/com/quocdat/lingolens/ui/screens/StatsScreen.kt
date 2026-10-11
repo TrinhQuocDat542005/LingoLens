@@ -104,6 +104,7 @@ fun StatsScreen(navController: NavController) {
                 }
             }
 
+            com.quocdat.lingolens.ui.learning.SyncStatusCard()
             RecognitionHistoryCard(historyState, historyViewModel::refresh)
 
             // Beautiful Custom Bar Chart card

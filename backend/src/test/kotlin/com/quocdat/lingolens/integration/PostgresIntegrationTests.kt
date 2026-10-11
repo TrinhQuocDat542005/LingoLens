@@ -37,7 +37,7 @@ class PostgresIntegrationTests {
     @Autowired lateinit var mapper: ObjectMapper
 
     @Test fun `all migrations apply and seed vocabulary on PostgreSQL`() {
-        assertEquals(6, jdbc.queryForObject(
+        assertEquals(7, jdbc.queryForObject(
             "SELECT COUNT(*) FROM flyway_schema_history WHERE success = TRUE AND type = 'SQL'", Int::class.java)!!)
         assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM roles", Int::class.java)!!)
         assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM vocabularies WHERE is_published = TRUE", Int::class.java)!! > 0)
@@ -91,6 +91,39 @@ class PostgresIntegrationTests {
             .andExpect(status().isNotFound)
         mockMvc.perform(get("/api/v1/vocabularies").param("search", "book").header("Authorization", "Bearer $access"))
             .andExpect(status().isOk).andExpect(jsonPath("$.data.content.length()").value(0))
+    }
+
+    @Test @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    fun `concurrent sync retries commit exactly one recognition on PostgreSQL`() {
+        val email = "concurrent-${UUID.randomUUID()}@lingolens.dev"
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(RegisterRequest(email, "Secure123!", "Concurrent User"))))
+            .andExpect(status().isCreated)
+        val response = mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(LoginRequest(email, "Secure123!"))))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+        val access = mapper.readTree(response).path("data").path("accessToken").asText()
+        val userId = jdbc.queryForObject("SELECT id FROM users WHERE email = ?", Long::class.java, email)!!
+        val id = UUID.randomUUID().toString()
+        val body = """{"accountId":$userId,"operationId":"$id","kind":"RECOGNITION","payload":{"detectedLabel":"book","confidence":0.9,"engine":"EFFICIENTDET"}}"""
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        val start = java.util.concurrent.CountDownLatch(1)
+        try {
+            val requests = (1..2).map {
+                executor.submit<Long> {
+                    start.await()
+                    val result = mockMvc.perform(post("/api/v1/sync/operations").header("Authorization", "Bearer $access")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                        .andExpect(status().isOk).andReturn().response.contentAsString
+                    mapper.readTree(result).path("data").path("remoteId").asLong()
+                }
+            }
+            start.countDown()
+            val ids = requests.map { it.get(30, java.util.concurrent.TimeUnit.SECONDS) }
+            assertEquals(ids.first(), ids.last())
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM recognition_history WHERE user_id = ?", Int::class.java, userId)!!)
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM sync_receipts WHERE user_id = ?", Int::class.java, userId)!!)
+        } finally { executor.shutdownNow() }
     }
 
     companion object {

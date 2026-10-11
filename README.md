@@ -13,23 +13,26 @@ LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin con
 - Image quality warnings, ML Kit Image Labeling fallback and manual word selection.
 - Registration/login, encrypted Android session storage, hashed/rotating refresh tokens and role-based access.
 - Room-backed word library isolated by account, durable learning events and local progress statistics.
+- Durable outbox for save/delete, recognition history and corrections; WorkManager retries when connected.
+- Idempotent server receipts, account fencing, cloud library restoration and visible pending/error status.
 - Published vocabulary API, transactional catalog cache refresh and offline access to downloaded/saved content.
 - Real device Text-to-Speech with language availability checks and lifecycle cleanup.
 - Recognition history and correction reports synchronized to the API.
 - Admin console for user status/roles, vocabulary publishing, correction review and audit logs.
 - Flyway migrations, API/unit tests, PostgreSQL integration tests and CI build artifacts.
 
-**Current limits:** Saved words and learning events stay on one device; cloud synchronization and spaced repetition are planned. First login and first content download require the API. A previously signed-in account can reopen using its cached profile during a network outage; offline access cannot detect server-side account revocation until reconnection. TTS depends on an installed English voice and the engine may require a network connection. Model accuracy has not yet been measured; see the [evaluation protocol](docs/model-evaluation/README.md).
+**Current limits:** Learning data synchronizes with the account through a durable local queue; spaced repetition is planned. Conflicting edits from different devices use server arrival order (last accepted save/delete wins). First login and first content download require the API. A previously signed-in account can reopen using its cached profile during a network outage; offline access cannot detect server-side account revocation until reconnection. TTS depends on an installed English voice and the engine may require a network connection. Model accuracy has not yet been measured; see the [evaluation protocol](docs/model-evaluation/README.md).
 
 ## Try the learning loop
 
 1. Start the API and admin console, then install the Android debug APK.
 2. Register a learner. Home starts with an empty library and zero activity.
 3. Capture a supported object (for example, a book), choose a detection and open its published vocabulary.
-4. Play the English pronunciation, save the word and check My Words / Stats.
+4. Play the English pronunciation, save the word and check My Words / Stats and the sync status card.
 5. Reopen the app: the saved word remains. Switch accounts: each account has its own library.
-6. After Home downloads the catalog, disconnect the network and browse downloaded/saved words. Use **Update catalog** or **Refresh content** after reconnecting.
-7. Edit/publish vocabulary in the admin console, use **Refresh content** on the result screen and see the revised content.
+6. After Home downloads the catalog, disconnect the network and save/delete words or queue a correction. Reconnect: the pending count drains automatically; **Sync / retry** also requests a run.
+7. Sign in with the same account on another installation and sync to restore the saved library and first-learning history.
+8. Edit/publish vocabulary in the admin console, use **Refresh content** on the result screen and see the revised content.
 
 On-device processing keeps captured images off the server. Saved snapshots contain vocabulary text; temporary image paths are not persisted in the library.
 
@@ -44,6 +47,11 @@ flowchart LR
     Result --> Cache[Room: catalog / account word library]
     Result --> TTS[Device Text-to-Speech]
     Cache --> Progress[Local learning events / statistics]
+    Cache --> Outbox[Room outbox / stable operation IDs]
+    Outbox --> Worker[WorkManager: connected / exponential retry]
+    Worker --> Sync[Account-scoped sync API / receipts]
+    Sync --> DB
+    Sync --> Cache
     API --> Catalog[Published vocabulary]
     Catalog --> Cache
     Result --> API[Spring Boot: history / corrections]
@@ -165,10 +173,10 @@ npm run build
 | Data | Owner / storage | Offline behavior |
 | --- | --- | --- |
 | Published vocabulary | API / PostgreSQL, shared Room cache | Read after download; manual refresh checks latest publication |
-| Saved words | Account ID + normalized word / Room | Save, delete and reopen locally; no cloud sync yet |
-| Learning events | First save per account and word / Room | Drive daily counts, 7-day activity and streak |
+| Saved words | Account ID + normalized word / Room and PostgreSQL | Save/delete locally; durable queue uploads, cloud snapshot restores other installations |
+| Learning events | First save per account and word / Room and PostgreSQL | Drive daily counts, 7-day activity and streak; merge earliest first-save date |
 | Session | Keystore-encrypted tokens + cached profile / DataStore | Cached profile only on connection failure; rejected credentials do not restore it |
-| Recognition history / corrections | API / PostgreSQL | Sync needs connection; durable retry queue is planned |
+| Recognition history / corrections | Room outbox → API / PostgreSQL | Queue without a connection; corrections depend on their recognition operation |
 
 A word is counted as newly learned only on its first save for that account. Deleting a word removes it from the library while retaining its first learning event; resaving does not inflate progress. Streak counts consecutive active local calendar days, allowing an unfinished current day. Vocabulary refresh downloads every page before replacing the cache in one transaction. A lookup returning `404` evicts the shared cache entry; an existing personal saved snapshot remains accessible with a notice. Account data and tokens are excluded from Android backup/device transfer.
 
@@ -183,6 +191,19 @@ GET /api/v1/vocabularies/book
 
 The catalog returns `data.content` and `data.totalPages`; size is bounded to 1–100. Lookup matches case-insensitively and returns a structured `404 / VOCABULARY_NOT_FOUND` for absent or unpublished words. Unknown words do not receive fabricated definitions, translations or phonetics.
 
+### Durable sync
+
+Local edits and their upload intent commit together in Room. Connected WorkManager jobs process each account's queue in order with exponential backoff; periodic work and startup recovery cover an interrupted enqueue. Successful server acknowledgement removes an operation. Transport failures / HTTP 408, 429 and 5xx retry; authentication failure pauses; other rejected operations remain visible and block the queue until manual retry. The UI distinguishes **queued locally** from a server acknowledgement.
+
+```http
+POST /api/v1/sync/operations
+GET /api/v1/sync/learning?accountId=123
+```
+
+Every operation carries a stable UUID and expected account ID. The server checks that account against the authenticated user, locks account writes, and commits the operation plus its receipt atomically. A replay returns the original receipt; reusing an ID with different content returns `409`. Old replays cannot resurrect words deleted by later operations. Corrections reference the UUID of their recognition, so both can be queued offline.
+
+Cloud pull uses a full account snapshot after draining the queue, preserving local edits made while the download was in flight. Tombstones retain deletion and first-learning history. WorkManager execution timing depends on Android scheduling; it is not an exact timer. See the [sync protocol and conflict policy](docs/sync-protocol.md).
+
 ## Model provenance
 
 The bundled EfficientDet-Lite0 INT8 model is pretrained for COCO and used through MediaPipe Tasks Vision. It is not trained specifically for LingoLens.
@@ -196,6 +217,6 @@ The bundled EfficientDet-Lite0 INT8 model is pretrained for COCO and used throug
 
 1. Reproducible setup, auth fixes, CI and documentation — [week 1 report](docs/portfolio/week1.md).
 2. Persistent words per account, vocabulary API/cache, local learning statistics and real Text-to-Speech — [week 2 report](docs/portfolio/week2.md).
-3. Offline write queue, retry and idempotent sync.
+3. Offline write queue, retry, idempotent sync and cloud library restoration — [week 3 report](docs/portfolio/week3.md).
 4. Spaced repetition, review scheduling and retention statistics.
 5. Physical-device benchmarks, demo video and release.
