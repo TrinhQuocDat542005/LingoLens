@@ -16,3 +16,9 @@ security:
     secret-key: test-only-lingolens-jwt-secret-key-at-least-32-bytes
     expiration-time: 900000
     refresh-expiration-time: 604800000
+
+app:
+  admin:
+    bootstrap:
+      email: ""
+      password: ""

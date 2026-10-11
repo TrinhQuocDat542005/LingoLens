@@ -16,6 +16,11 @@
 .cxx
 local.properties
 .env
+.env.*
+!.env.example
+!**/.env.example
+**/*.tsbuildinfo
+/.local/
 **/google-services.json
 backend/src/main/resources/application-local.yml
 **/node_modules/

@@ -1,16 +1,39 @@
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: lingolens-postgres
     ports:
       - "5433:5432"
     environment:
       POSTGRES_DB: lingolens
-      POSTGRES_USER: lingolens
+      POSTGRES_USER: ${DB_USERNAME:-lingolens}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-lingolens_password}
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/lingolens
+      DB_USERNAME: ${DB_USERNAME:-lingolens}
+      DB_PASSWORD: ${DB_PASSWORD:-lingolens_password}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-lingolens-secret-key-change-before-production-2026}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   pgdata:

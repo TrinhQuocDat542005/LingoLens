@@ -1,0 +1,4 @@
+spring:
+  config:
+    # Run from backend/ or repository root. Use unquoted KEY=value syntax.
+    import: "optional:file:../.env[.properties],optional:file:.env[.properties]"

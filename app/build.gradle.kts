@@ -1,7 +1,27 @@
+import java.net.URI
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
+
+fun apiUrl(value: String, httpsOnly: Boolean = false): String {
+    val uri = URI(value.trim())
+    require(uri.host != null && uri.scheme in if (httpsOnly) listOf("https") else listOf("http", "https")) {
+        "API URL must be an absolute ${if (httpsOnly) "HTTPS" else "HTTP(S)"} URL"
+    }
+    require(uri.userInfo == null && uri.query == null && uri.fragment == null) {
+        "API URL cannot contain credentials, a query or a fragment"
+    }
+    return uri.toASCIIString().trimEnd('/') + "/"
+}
+
+val debugApiUrl = apiUrl(providers.gradleProperty("apiBaseUrl")
+    .orElse(providers.environmentVariable("LINGOLENS_API_BASE_URL"))
+    .getOrElse("http://10.0.2.2:8080/"))
+val releaseApiUrl = providers.gradleProperty("releaseApiBaseUrl")
+    .orElse(providers.environmentVariable("LINGOLENS_RELEASE_API_BASE_URL"))
+    .orNull?.let { apiUrl(it, httpsOnly = true) }
 
 android {
     namespace = "com.quocdat.lingolens"
@@ -22,7 +42,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"$debugApiUrl\"")
+        }
         release {
+            buildConfigField("String", "API_BASE_URL", "\"${releaseApiUrl.orEmpty()}\"")
             optimization {
                 enable = false
             }
@@ -35,6 +59,16 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+// Debug builds work immediately; release artifacts require an explicit HTTPS endpoint.
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    val configuredReleaseApiUrl = releaseApiUrl
+    doFirst {
+        require(!configuredReleaseApiUrl.isNullOrBlank()) {
+            "Set -PreleaseApiBaseUrl=https://your-api-host/ or LINGOLENS_RELEASE_API_BASE_URL before building release"
+        }
     }
 }
 

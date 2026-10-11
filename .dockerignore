@@ -1,0 +1,15 @@
+.git
+.idea
+.gradle
+.local
+**/build
+**/.gradle
+**/.kotlin
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+**/local.properties
+app
+admin-dashboard
+docs

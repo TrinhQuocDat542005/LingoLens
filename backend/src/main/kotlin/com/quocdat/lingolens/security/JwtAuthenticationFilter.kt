@@ -34,7 +34,10 @@ class JwtAuthenticationFilter(
                 val userDetailsOpt = userRepository.findByEmail(userEmail)
                 if (userDetailsOpt.isPresent) {
                     val userDetails = userDetailsOpt.get()
-                    if (jwtService.isTokenValid(jwt, userDetails)) {
+                    if (!userDetails.isEnabled) {
+                        request.setAttribute("exception_code", "ACCOUNT_DISABLED")
+                        request.setAttribute("exception_message", "This account has been disabled")
+                    } else if (jwtService.isTokenValid(jwt, userDetails)) {
                         val authToken = UsernamePasswordAuthenticationToken(
                          userDetails,
                             null,

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.stereotype.Service
 import java.util.Date
+import java.nio.charset.StandardCharsets
 import javax.crypto.SecretKey
 
 @Service
@@ -19,9 +20,8 @@ class JwtService(
     private val jwtExpiration: Long
 ) {
 
-    private val signingKey: SecretKey by lazy {
-        Keys.hmacShaKeyFor(secretKeyString.toByteArray())
-    }
+    // Validate key length at startup rather than failing during the first login.
+    private val signingKey: SecretKey = Keys.hmacShaKeyFor(secretKeyString.toByteArray(StandardCharsets.UTF_8))
 
     fun extractUsername(token: String): String {
         return extractClaim(token, Claims::getSubject)

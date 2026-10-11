@@ -2,6 +2,8 @@ package com.quocdat.lingolens.auth
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.quocdat.lingolens.user.UserRepository
+import com.quocdat.lingolens.security.RoleRepository
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.Test
@@ -24,6 +26,8 @@ import java.util.UUID
 class AuthControllerTests {
     @Autowired lateinit var mockMvc: MockMvc
     @Autowired lateinit var mapper: ObjectMapper
+    @Autowired lateinit var users: UserRepository
+    @Autowired lateinit var roles: RoleRepository
 
     private fun email() = "test-${UUID.randomUUID()}@lingolens.dev"
     private fun register(email: String, password: String = "Secure123!") = mockMvc.perform(
@@ -74,5 +78,55 @@ class AuthControllerTests {
         val email = email(); register(email); val access = login(email).path("accessToken").asText()
         mockMvc.perform(get("/api/v1/admin/hello").header("Authorization", "Bearer $access"))
             .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("ACCESS_DENIED"))
+    }
+
+    @Test fun `admin disabling a user blocks existing access login and refresh tokens`() {
+        val adminEmail = email()
+        register(adminEmail).andExpect(status().isCreated)
+        users.findByEmail(adminEmail).orElseThrow().roles.add(roles.findByName("ROLE_ADMIN").orElseThrow())
+        users.flush()
+        val adminAccess = login(adminEmail).path("accessToken").asText()
+
+        val userEmail = email()
+        register(userEmail).andExpect(status().isCreated)
+        val tokens = login(userEmail)
+        val access = tokens.path("accessToken").asText()
+        val refresh = tokens.path("refreshToken").asText()
+        val userId = users.findByEmail(userEmail).orElseThrow().id!!
+
+        mockMvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer $access"))
+            .andExpect(status().isOk)
+        mockMvc.perform(patch("/api/v1/admin/users/$userId/status").header("Authorization", "Bearer $adminAccess")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"enabled":false}"""))
+            .andExpect(status().isOk)
+
+        listOf("/api/v1/users/me", "/api/v1/recognitions").forEach { path ->
+            mockMvc.perform(get(path).header("Authorization", "Bearer $access"))
+                .andExpect(status().isUnauthorized).andExpect(jsonPath("$.code").value("ACCOUNT_DISABLED"))
+        }
+        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(LoginRequest(userEmail, "Secure123!"))))
+            .andExpect(status().isUnauthorized).andExpect(jsonPath("$.code").value("ACCOUNT_DISABLED"))
+        mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(RefreshTokenRequest(refresh))))
+            .andExpect(status().isUnauthorized).andExpect(jsonPath("$.code").value("INVALID_TOKEN"))
+    }
+
+    @Test fun `removing admin role takes effect for an already issued access token`() {
+        val userEmail = email()
+        register(userEmail).andExpect(status().isCreated)
+        val user = users.findByEmail(userEmail).orElseThrow()
+        val adminRole = roles.findByName("ROLE_ADMIN").orElseThrow()
+        user.roles.add(adminRole)
+        users.flush()
+        val access = login(userEmail).path("accessToken").asText()
+        mockMvc.perform(get("/api/v1/admin/hello").header("Authorization", "Bearer $access"))
+            .andExpect(status().isOk)
+        user.roles.remove(adminRole)
+        users.flush()
+        mockMvc.perform(get("/api/v1/admin/hello").header("Authorization", "Bearer $access"))
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("ACCESS_DENIED"))
+        mockMvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer $access"))
+            .andExpect(status().isOk)
     }
 }
