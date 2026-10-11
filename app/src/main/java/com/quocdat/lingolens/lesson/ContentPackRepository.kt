@@ -41,7 +41,7 @@ class RemotePackGateway(private val api:PackApi):PackGateway {
     }
 }
 class ContentPackRepository(private val db:LearningDatabase,private val gateway:PackGateway,
-    private val isSignedIn:suspend(Long)->Boolean,private val gson:Gson=Gson()) {
+    private val isSignedIn:suspend(Long)->Boolean,private val gson:Gson=Gson(),private val scheduleSync:(Long)->Unit={}) {
     suspend fun downloadCourse(account:Long,course:String) {
         check(account>0 && isSignedIn(account))
         val manifest=gateway.manifest(course)
@@ -64,6 +64,7 @@ class ContentPackRepository(private val db:LearningDatabase,private val gateway:
                 if(db.lessonDao().pack(account,pack.revisionId)==null) db.lessonDao().insertPack(ContentPack(account,pack.revisionId,pack.lessonId,course,1,manifestJson,content,reference.checksum,bytes.size.toLong(),System.currentTimeMillis(),true))
             }
         }
+        check(isSignedIn(account));scheduleSync(account)
     }
     suspend fun ready(account:Long,course:String):List<LessonPack> {
         val saved=db.lessonDao().completePacks(account,course)

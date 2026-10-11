@@ -43,6 +43,11 @@ interface LessonDao {
     @Insert suspend fun enqueue(operation: LessonAttemptOutbox)
     @Query("SELECT * FROM LessonAttemptOutbox WHERE accountId=:accountId AND state!='CONFIRMED' ORDER BY queuedAt, attemptId")
     suspend fun pending(accountId: Long): List<LessonAttemptOutbox>
+    @Query("SELECT * FROM LessonAttemptOutbox WHERE accountId=:accountId AND attemptId=:id")
+    suspend fun outbox(accountId: Long,id:String):LessonAttemptOutbox?
+    @Update suspend fun updateOutbox(operation:LessonAttemptOutbox)
+    @Query("SELECT DISTINCT courseId FROM ContentPack WHERE accountId=:accountId AND complete=1")
+    suspend fun courseIds(accountId:Long):List<String>
     @Query("UPDATE LessonAttemptOutbox SET state='CONFIRMED', lastError=NULL WHERE accountId=:accountId AND attemptId=:attemptId")
     suspend fun acknowledge(accountId: Long, attemptId: String)
     @Upsert suspend fun saveCurriculum(state: CurriculumAccountState)

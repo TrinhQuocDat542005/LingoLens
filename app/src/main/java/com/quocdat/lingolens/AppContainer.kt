@@ -81,10 +81,14 @@ class AppContainer(context: Context) {
         authenticatedRetrofit.create(com.quocdat.lingolens.lesson.LessonApi::class.java))
     val contentPackRepository = com.quocdat.lingolens.lesson.ContentPackRepository(learningDatabase,
         com.quocdat.lingolens.lesson.RemotePackGateway(authenticatedRetrofit.create(com.quocdat.lingolens.lesson.PackApi::class.java)),
-        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id })
+        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id },scheduleSync = syncScheduler::schedule)
     val lessonSessionRepository = com.quocdat.lingolens.lesson.LessonSessionRepository(learningDatabase,contentPackRepository,
         isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id },scheduleSync = syncScheduler::schedule)
     val syncEngine = com.quocdat.lingolens.sync.SyncEngine(learningDatabase,
         authenticatedRetrofit.create(com.quocdat.lingolens.sync.SyncApi::class.java),
         isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id })
+    val lessonSyncEngine = com.quocdat.lingolens.lesson.LessonSyncEngine(learningDatabase,
+        com.quocdat.lingolens.lesson.RemoteLessonSyncGateway(authenticatedRetrofit.create(com.quocdat.lingolens.lesson.LessonSyncApi::class.java)),
+        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id })
+    val syncCoordinator = com.quocdat.lingolens.sync.SyncCoordinator(syncEngine::run,lessonSyncEngine::run)
 }

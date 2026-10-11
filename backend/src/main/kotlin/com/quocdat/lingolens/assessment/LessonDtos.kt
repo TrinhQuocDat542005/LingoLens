@@ -19,6 +19,8 @@ data class AttemptResult(val id: UUID, val lessonId: UUID, val mode: String, val
 data class AttemptSubmissionResponse(val data: AttemptResult, val success: Boolean = true,
     val message: String = "Attempt recorded", val code: String? = data.code,
     val timestamp: java.time.Instant = java.time.Instant.now())
+data class ConfirmedLessonProgress(val lessonId:UUID,val bestScorePercent:Int,val passed:Boolean)
+data class LessonCourseSnapshot(val courseId:UUID,val enrollmentStatus:String,val progress:List<ConfirmedLessonProgress>,val xpTotal:Int)
 data class CourseCard(val id: UUID, val title: String, val contentStatus: String, val firstLessonId: UUID, val firstRevisionId: UUID, val completed: Boolean)
 data class CurriculumCatalog(val courses: List<CourseCard>, val xpTotal: Int)
 data class OptionView(val key: String, val label: String, val position: Int)

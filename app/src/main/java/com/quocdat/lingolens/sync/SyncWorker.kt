@@ -9,7 +9,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     override suspend fun doWork(): Result {
         val accountId = inputData.getLong("accountId", -1)
         if (accountId <= 0) return Result.failure()
-        val engine = (applicationContext as LingoLensApplication).container.syncEngine
+        val engine = (applicationContext as LingoLensApplication).container.syncCoordinator
         return when (engine.run(accountId)) {
             SyncOutcome.RETRY -> Result.retry()
             else -> Result.success()

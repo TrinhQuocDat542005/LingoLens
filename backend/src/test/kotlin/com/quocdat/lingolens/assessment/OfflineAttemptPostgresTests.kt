@@ -107,6 +107,23 @@ class OfflineAttemptPostgresTests {
         mockMvc.perform(delete("/api/v1/admin/vocabularies/$id")).andExpect(status().isConflict).andExpect(jsonPath("$.code").value("VOCABULARY_IN_USE"))
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM vocabularies WHERE id=?",Int::class.java,id)!!);assertEquals(before,jdbc.queryForList("SELECT * FROM lesson_vocabularies WHERE vocabulary_id=?",id))
     }
+    @Test fun `course snapshot contains only server confirmed progress and course XP`() {
+        service.submit(account,request(1))
+        mockMvc.perform(get("/api/v1/curriculum/courses/$course/state").header("Authorization","Bearer $token").header("X-LingoLens-Account",account))
+            .andExpect(status().isOk).andExpect(jsonPath("$.data.xpTotal").value(0)).andExpect(jsonPath("$.data.progress.length()").value(0))
+        service.submit(account,request(0))
+        mockMvc.perform(get("/api/v1/curriculum/courses/$course/state").header("Authorization","Bearer $token").header("X-LingoLens-Account",account))
+            .andExpect(status().isOk).andExpect(jsonPath("$.data.xpTotal").value(30)).andExpect(jsonPath("$.data.progress[0].passed").value(true))
+    }
+    @Test fun `account header mismatch rejects submit and snapshot before data access`() {
+        val input=request(0)
+        mockMvc.perform(post("/api/v1/lesson-attempts").header("Authorization","Bearer $token").header("X-LingoLens-Account",account+1).contentType("application/json").content(mapper.writeValueAsString(input)))
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("ACCOUNT_MISMATCH"))
+        mockMvc.perform(get("/api/v1/curriculum/courses/$course/state").header("Authorization","Bearer $token").header("X-LingoLens-Account",account+1))
+            .andExpect(status().isForbidden)
+        assertEquals(0,count("lesson_attempts"));assertEquals(0,count("xp_events"))
+        mockMvc.perform(get("/api/v1/curriculum/courses/$course/state")).andExpect(status().isUnauthorized)
+    }
     companion object {
         @Container @JvmField val postgres=PostgreSQLContainer<Nothing>("postgres:15-alpine")
         @DynamicPropertySource @JvmStatic fun database(registry:DynamicPropertyRegistry){

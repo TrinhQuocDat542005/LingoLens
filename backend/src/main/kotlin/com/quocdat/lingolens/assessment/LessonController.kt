@@ -10,14 +10,24 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1")
 class LessonController(private val lessons: LessonService) {
+    @GetMapping("/curriculum/courses/{id}/state") fun courseState(@AuthenticationPrincipal user:User,@PathVariable id:UUID,
+        @RequestHeader(value="X-LingoLens-Account",required=false) account:Long?):ApiResponse<LessonCourseSnapshot> {
+        requireAccount(user.id!!,account)
+        return ApiResponse.success("Confirmed course state loaded",lessons.courseState(user.id!!,id))
+    }
     @GetMapping("/curriculum") fun catalog(@AuthenticationPrincipal user: User) = ApiResponse.success("Curriculum loaded",lessons.catalog(user.id!!))
     @PostMapping("/curriculum/courses/{id}/enroll") fun enroll(@AuthenticationPrincipal user: User,@PathVariable id: UUID): ApiResponse<Unit> {
         lessons.enroll(user.id!!,id); return ApiResponse.success("Course enrolled")
     }
     @GetMapping("/curriculum/lessons/{id}") fun lesson(@AuthenticationPrincipal user: User,@PathVariable id: UUID) = ApiResponse.success("Lesson loaded",lessons.lesson(user.id!!,id))
-    @PostMapping("/lesson-attempts") fun submit(@AuthenticationPrincipal user: User,@Valid @RequestBody request: SubmitLessonRequest): org.springframework.http.ResponseEntity<AttemptSubmissionResponse> {
+    @PostMapping("/lesson-attempts") fun submit(@AuthenticationPrincipal user: User,@Valid @RequestBody request: SubmitLessonRequest,
+        @RequestHeader(value="X-LingoLens-Account",required=false) account:Long?): org.springframework.http.ResponseEntity<AttemptSubmissionResponse> {
+        requireAccount(user.id!!,account)
         val result=lessons.submit(user.id!!,request)
         return org.springframework.http.ResponseEntity.status(if(result.retryable) 202 else 200).body(AttemptSubmissionResponse(result))
     }
     @GetMapping("/lesson-attempts/{id}") fun result(@AuthenticationPrincipal user: User,@PathVariable id: UUID) = ApiResponse.success("Attempt loaded",lessons.result(user.id!!,id))
+    private fun requireAccount(actual:Long,expected:Long?) {
+        if(expected!=null && actual!=expected) throw LessonRequestException(org.springframework.http.HttpStatus.FORBIDDEN,"ACCOUNT_MISMATCH","Account does not match authenticated session")
+    }
 }

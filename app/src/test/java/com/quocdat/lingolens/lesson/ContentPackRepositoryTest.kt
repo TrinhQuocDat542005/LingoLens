@@ -30,6 +30,7 @@ class ContentPackRepositoryTest {
     private var corruptStructure=false
     private var truncated=false
     private var wrongRevision=false
+    private var scheduled=0
     private var afterDownload: ()->Unit = {}
     private fun hash(bytes: ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private val gateway=object: PackGateway {
@@ -48,7 +49,7 @@ class ContentPackRepositoryTest {
     }
     @Before fun setup() {
         db=Room.inMemoryDatabaseBuilder(context,LearningDatabase::class.java).build()
-        repository=ContentPackRepository(db,gateway,{signedIn==it})
+        repository=ContentPackRepository(db,gateway,{signedIn==it},scheduleSync={scheduled++})
     }
     @After fun close(){ db.close() }
     @Test fun `large three lesson fixture validates complete format and account isolation`()=runBlocking {
@@ -97,5 +98,11 @@ class ContentPackRepositoryTest {
         wrongChecksum=true
         var rejected=false; try{repository.downloadCourse(1,course)}catch(_:IllegalArgumentException){rejected=true}
         assertTrue(rejected); assertEquals(before,packs.map { db.lessonDao().pack(1,it.revisionId) }); assertEquals(3,repository.ready(1,course).size)
+    }
+    @Test fun `complete download schedules confirmed state pull but partial download does not`()=runBlocking {
+        wrongChecksum=true
+        var rejected=false;try{repository.downloadCourse(1,course)}catch(_:IllegalArgumentException){rejected=true}
+        assertTrue(rejected);assertEquals(0,scheduled)
+        wrongChecksum=false;repository.downloadCourse(1,course);assertEquals(1,scheduled)
     }
 }

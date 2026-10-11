@@ -13,6 +13,16 @@ import java.util.UUID
 @Service
 class LessonService(private val jdbc: JdbcTemplate, private val mapper: ObjectMapper) {
     @Transactional(readOnly=true)
+    fun courseState(account:Long,course:UUID):LessonCourseSnapshot {
+        checkRequest(jdbc.queryForObject("SELECT count(*) FROM courses WHERE id=? AND status IN ('PUBLISHED','ARCHIVED')",Int::class.java,course)!! == 1,"Course unavailable")
+        val enrollment=jdbc.queryForList("SELECT status FROM enrollments WHERE user_id=? AND course_id=?",String::class.java,account,course).firstOrNull() ?: "NONE"
+        val progress=jdbc.queryForList("SELECT p.lesson_id,p.best_score_percent,p.first_passed_at FROM lesson_progress p JOIN lessons l ON l.id=p.lesson_id JOIN course_units u ON u.id=l.unit_id WHERE p.user_id=? AND u.course_id=? ORDER BY u.position,l.position",account,course).map{
+            ConfirmedLessonProgress(it["lesson_id"] as UUID,(it["best_score_percent"] as Number).toInt(),it["first_passed_at"]!=null)
+        }
+        val xp=jdbc.queryForObject("SELECT COALESCE(sum(x.amount),0) FROM xp_events x JOIN lessons l ON l.id::text=x.source_key JOIN course_units u ON u.id=l.unit_id WHERE x.user_id=? AND u.course_id=?",Int::class.java,account,course)!!
+        return LessonCourseSnapshot(course,enrollment,progress,xp)
+    }
+    @Transactional(readOnly=true)
     fun catalog(account: Long): CurriculumCatalog {
         val rows=jdbc.queryForList("SELECT c.id,c.title,c.content_status,l.id lesson_id,r.id revision_id FROM courses c JOIN course_units u ON u.course_id=c.id JOIN lessons l ON l.unit_id=u.id JOIN lesson_revisions r ON r.lesson_id=l.id AND r.status='PUBLISHED' WHERE c.status='PUBLISHED' ORDER BY c.created_at,u.position,l.position")
         val courses=rows.groupBy { it["id"] }.values.map { group ->
