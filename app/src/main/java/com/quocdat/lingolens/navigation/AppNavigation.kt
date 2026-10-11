@@ -58,7 +58,7 @@ private fun MainNavigation(viewModel: AuthViewModel, profile: com.quocdat.lingol
     val navController = rememberNavController()
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination
     val items = listOf(BottomNavItem.Home, BottomNavItem.Camera, BottomNavItem.MyWords, BottomNavItem.Stats, BottomNavItem.Settings)
-    val showBottomBar = currentDestination?.route != Screen.Result.route && currentDestination?.route != Screen.Camera.route && currentDestination?.route != "review"
+    val showBottomBar = currentDestination?.route != Screen.Result.route && currentDestination?.route != Screen.Camera.route && currentDestination?.route != "review" && currentDestination?.route != "lesson"
     Scaffold(bottomBar = {
         if (showBottomBar) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
             items.forEach { item ->
@@ -73,6 +73,7 @@ private fun MainNavigation(viewModel: AuthViewModel, profile: com.quocdat.lingol
         NavHost(navController, Screen.Home.route, Modifier.padding(padding)) {
             composable(Screen.Home.route) { HomeScreen(navController) }
             composable("review") { ReviewScreen(navController) }
+            composable("lesson") { com.quocdat.lingolens.lesson.LessonScreen(navController) }
             composable(Screen.Camera.route) { CameraScreen(navController) }
             composable(
                 Screen.Result.route,

@@ -10,6 +10,11 @@ group = "com.quocdat.lingolens"
 kotlin.sourceSets.getByName("main").kotlin.srcDir("../shared/src/main/kotlin")
 version = "1.0.0"
 
+springBoot {
+    // The seed CLI is a separate entrypoint, never the server's startup entrypoint.
+    mainClass.set("com.quocdat.lingolens.LingoLensApplicationKt")
+}
+
 java {
     sourceCompatibility = JavaVersion.VERSION_21
 }

@@ -91,6 +91,15 @@ fun HomeScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             item { com.quocdat.lingolens.ui.learning.ReviewOverviewCard(navController) }
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Text("Học theo lộ trình",style=MaterialTheme.typography.titleLarge)
+                        Text("Học từ, trả lời câu hỏi và nhận XP khi vượt bài.")
+                        Button(onClick={navController.navigate("lesson")}) { Text("Mở bài học") }
+                    }
+                }
+            }
             // Welcome Header
             item {
                 Card(Modifier.fillMaxWidth()) {
