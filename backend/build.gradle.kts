@@ -71,3 +71,11 @@ tasks.register<Test>("postgresTest") {
     useJUnitPlatform { includeTags("postgres") }
     shouldRunAfter(tasks.test)
 }
+
+tasks.register<JavaExec>("seedDemo") {
+    description = "Explicit dev/test DEMO import; never runs on application startup."
+    group = "application"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.quocdat.lingolens.curriculum.DemoSeedCli")
+    providers.gradleProperty("seedFile").orNull?.let { args(it) }
+}

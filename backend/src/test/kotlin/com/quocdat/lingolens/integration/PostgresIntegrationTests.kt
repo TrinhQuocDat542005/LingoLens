@@ -169,8 +169,8 @@ class PostgresIntegrationTests {
     }
 
     @Test fun `all migrations apply and seed vocabulary on PostgreSQL`() {
-        assertEquals(9, jdbc.queryForObject(
-            "SELECT COUNT(*) FROM flyway_schema_history WHERE success = TRUE AND type = 'SQL'", Int::class.java)!!)
+        assertEquals(12, jdbc.queryForObject(
+            "SELECT COUNT(*) FROM flyway_schema_history WHERE success = TRUE AND version IS NOT NULL", Int::class.java)!!)
         assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM roles", Int::class.java)!!)
         assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM vocabularies WHERE is_published = TRUE", Int::class.java)!! > 0)
         assertEquals("PostgreSQL", jdbc.dataSource!!.connection.use { it.metaData.databaseProductName })

@@ -1,0 +1,1 @@
+-- Schema/provenance only. No DEMO rows in any Flyway migration.
