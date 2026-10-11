@@ -11,7 +11,7 @@ data class UpdateProfileRequest(
     @field:Size(max = 100, message = "Name must not exceed 100 characters")
     val name: String,
 
-    @field:Pattern(regexp = "B1|B2", message = "Target level must be B1 or B2")
+    @field:Pattern(regexp = "A1|B1|B2", message = "Target level must be A1, B1 or B2")
     val targetLevel: String,
 
     @field:Min(1, message = "Daily goal must be at least 1")

@@ -24,7 +24,7 @@ class User(
     private var name: String,
 
     @Column(name = "target_level", nullable = false)
-    var targetLevel: String = "B1",
+    var targetLevel: String = "A1",
 
     @Column(name = "streak_days", nullable = false)
     var streakDays: Int = 0,

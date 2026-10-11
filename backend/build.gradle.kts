@@ -10,6 +10,11 @@ group = "com.quocdat.lingolens"
 kotlin.sourceSets.getByName("main").kotlin.srcDir("../shared/src/main/kotlin")
 version = "1.0.0"
 
+springBoot {
+    // The seed CLI is a separate entrypoint, never the server's startup entrypoint.
+    mainClass.set("com.quocdat.lingolens.LingoLensApplicationKt")
+}
+
 java {
     sourceCompatibility = JavaVersion.VERSION_21
 }
@@ -70,4 +75,12 @@ tasks.register<Test>("postgresTest") {
     classpath = sourceSets["test"].runtimeClasspath
     useJUnitPlatform { includeTags("postgres") }
     shouldRunAfter(tasks.test)
+}
+
+tasks.register<JavaExec>("seedDemo") {
+    description = "Explicit dev/test DEMO import; never runs on application startup."
+    group = "application"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.quocdat.lingolens.curriculum.DemoSeedCli")
+    providers.gradleProperty("seedFile").orNull?.let { args(it) }
 }

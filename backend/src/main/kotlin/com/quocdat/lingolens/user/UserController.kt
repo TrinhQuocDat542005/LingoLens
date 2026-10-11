@@ -13,17 +13,16 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/v1/users")
 @Tag(name = "User")
 @SecurityRequirement(name = "BearerAuth")
-class UserController(private val userRepository: UserRepository) {
+class UserController(private val profiles: com.quocdat.lingolens.settings.ProfileAdapter) {
     @GetMapping("/me")
     @Operation(summary = "Get the authenticated profile")
     fun getProfile(@AuthenticationPrincipal user: User) =
-        ApiResponse.success("Profile loaded", UserProfileResponse.from(user))
+        ApiResponse.success("Profile loaded", profiles.read(user))
 
     @PutMapping("/me")
     @Transactional
     @Operation(summary = "Update the authenticated profile")
     fun updateProfile(@AuthenticationPrincipal user: User, @Valid @RequestBody body: UpdateProfileRequest): ApiResponse<UserProfileResponse> {
-        user.updateProfile(body.name.trim(), body.targetLevel, body.dailyGoal)
-        return ApiResponse.success("Profile updated", UserProfileResponse.from(userRepository.save(user)))
+        return ApiResponse.success("Profile updated", profiles.update(requireNotNull(user.id), body))
     }
 }

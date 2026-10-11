@@ -15,6 +15,7 @@ class AdminBootstrap(
     private val users: UserRepository,
     private val roles: RoleRepository,
     private val encoder: PasswordEncoder,
+    private val profiles: com.quocdat.lingolens.settings.ProfileAdapter,
     @Value("\${app.admin.bootstrap.email:}") private val email: String,
     @Value("\${app.admin.bootstrap.password:}") private val password: String
 ) : ApplicationRunner {
@@ -33,7 +34,8 @@ class AdminBootstrap(
                 enabled = true
             }
         } else {
-            users.save(User(email = email.trim().lowercase(), password = encoder.encode(password), name = "LingoLens Admin", roles = mutableSetOf(userRole, adminRole)))
+            val created = users.saveAndFlush(User(email = email.trim().lowercase(), password = encoder.encode(password), name = "LingoLens Admin", roles = mutableSetOf(userRole, adminRole)))
+            profiles.initialize(created)
         }
     }
 }

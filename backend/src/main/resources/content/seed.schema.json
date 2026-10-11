@@ -1,0 +1,426 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LingoLens week 5 seed v1",
+  "description": "Structural contract. SeedValidator also enforces references, unique IDs/positions/words, normalized words, nonblank strings, DEMO weight 1, exactly three consecutive lessons, and a 2 MB input limit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "packId",
+    "contentStatus",
+    "pronunciationLocale",
+    "course",
+    "topic",
+    "unit",
+    "vocabularies",
+    "lessons"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "packId": {
+      "type": "string",
+      "format": "uuid",
+      "minLength": 36,
+      "maxLength": 36
+    },
+    "contentStatus": {
+      "enum": [
+        "DEMO",
+        "REVIEWED"
+      ]
+    },
+    "pronunciationLocale": {
+      "const": "en-US"
+    },
+    "course": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "code",
+        "title",
+        "description",
+        "level"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "minLength": 36,
+          "maxLength": 36
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "level": {
+          "const": "A1"
+        }
+      }
+    },
+    "topic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "slug",
+        "title",
+        "description",
+        "iconKey",
+        "displayOrder"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "minLength": 36,
+          "maxLength": 36
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "iconKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "displayOrder": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      }
+    },
+    "unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "courseId",
+        "topicId",
+        "title",
+        "position"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "minLength": 36,
+          "maxLength": 36
+        },
+        "courseId": {
+          "type": "string",
+          "format": "uuid",
+          "minLength": 36,
+          "maxLength": 36
+        },
+        "topicId": {
+          "type": "string",
+          "format": "uuid",
+          "minLength": 36,
+          "maxLength": 36
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "position": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      }
+    },
+    "vocabularies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "word",
+          "translation",
+          "phonetic",
+          "partOfSpeech",
+          "definition",
+          "example",
+          "level"
+        ],
+        "properties": {
+          "word": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "translation": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "phonetic": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "partOfSpeech": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "definition": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "example": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "level": {
+            "const": "A1"
+          }
+        }
+      },
+      "minItems": 15,
+      "maxItems": 18
+    },
+    "lessons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "unitId",
+          "title",
+          "position",
+          "estimatedMinutes",
+          "revision",
+          "vocabularyWords",
+          "questions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "minLength": 36,
+            "maxLength": 36
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "minLength": 36,
+            "maxLength": 36
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "revision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "revisionNo",
+              "introduction",
+              "sentencePatterns"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "minLength": 36,
+                "maxLength": 36
+              },
+              "revisionNo": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
+              },
+              "introduction": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "sentencePatterns": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "pattern",
+                    "example",
+                    "translation"
+                  ],
+                  "properties": {
+                    "pattern": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    },
+                    "example": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    },
+                    "translation": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    }
+                  }
+                },
+                "minItems": 1,
+                "maxItems": 2
+              }
+            }
+          },
+          "vocabularyWords": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "minItems": 5,
+            "maxItems": 8
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "type",
+                "prompt",
+                "explanation",
+                "position",
+                "weight",
+                "options",
+                "answerKey"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "minLength": 36,
+                  "maxLength": 36
+                },
+                "type": {
+                  "const": "MEANING_CHOICE"
+                },
+                "prompt": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "explanation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "position": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                },
+                "weight": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                },
+                "options": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "key",
+                      "label",
+                      "position"
+                    ],
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 8
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500
+                      },
+                      "position": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 4
+                      }
+                    }
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "answerKey": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "optionKey"
+                  ],
+                  "properties": {
+                    "optionKey": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 8
+                    }
+                  }
+                }
+              }
+            },
+            "minItems": 8,
+            "maxItems": 10
+          }
+        }
+      },
+      "minItems": 3,
+      "maxItems": 3
+    }
+  }
+}

@@ -1,0 +1,1073 @@
+{
+  "schemaVersion": 1,
+  "packId": "00000000-0000-4000-8000-000000000001",
+  "contentStatus": "DEMO",
+  "pronunciationLocale": "en-US",
+  "course": {
+    "id": "00000000-0000-4000-8000-000000000002",
+    "code": "english-first-steps-demo",
+    "title": "Những bước đầu tiếng Anh",
+    "description": "DEMO dev/test — chưa được rà soát độc lập.",
+    "level": "A1"
+  },
+  "topic": {
+    "id": "00000000-0000-4000-8000-000000000003",
+    "slug": "first-steps-demo",
+    "title": "Tiếng Anh hằng ngày",
+    "description": "Lời chào, đồ ăn và gia đình.",
+    "iconKey": "school",
+    "displayOrder": 0
+  },
+  "unit": {
+    "id": "00000000-0000-4000-8000-000000000004",
+    "courseId": "00000000-0000-4000-8000-000000000002",
+    "topicId": "00000000-0000-4000-8000-000000000003",
+    "title": "Chặng đầu tiên",
+    "position": 1
+  },
+  "vocabularies": [
+    {
+      "word": "hello",
+      "translation": "xin chào",
+      "phonetic": "/həˈloʊ/",
+      "partOfSpeech": "Interjection",
+      "definition": "Used to greet someone.",
+      "example": "Hello, my friend.",
+      "level": "A1"
+    },
+    {
+      "word": "goodbye",
+      "translation": "tạm biệt",
+      "phonetic": "/ɡʊdˈbaɪ/",
+      "partOfSpeech": "Interjection",
+      "definition": "Used when leaving someone.",
+      "example": "Goodbye, see you soon.",
+      "level": "A1"
+    },
+    {
+      "word": "please",
+      "translation": "làm ơn",
+      "phonetic": "/pliːz/",
+      "partOfSpeech": "Adverb",
+      "definition": "Used to make a polite request.",
+      "example": "Please sit here.",
+      "level": "A1"
+    },
+    {
+      "word": "thanks",
+      "translation": "cảm ơn",
+      "phonetic": "/θæŋks/",
+      "partOfSpeech": "Interjection",
+      "definition": "Used to express gratitude.",
+      "example": "Thanks for your help.",
+      "level": "A1"
+    },
+    {
+      "word": "yes",
+      "translation": "vâng",
+      "phonetic": "/jɛs/",
+      "partOfSpeech": "Interjection",
+      "definition": "Used to agree or answer positively.",
+      "example": "Yes, I am ready.",
+      "level": "A1"
+    },
+    {
+      "word": "no",
+      "translation": "không",
+      "phonetic": "/noʊ/",
+      "partOfSpeech": "Interjection",
+      "definition": "Used to disagree or answer negatively.",
+      "example": "No, thank you.",
+      "level": "A1"
+    },
+    {
+      "word": "water",
+      "translation": "nước",
+      "phonetic": "/ˈwɔtər/",
+      "partOfSpeech": "Noun",
+      "definition": "A clear liquid that people drink.",
+      "example": "I drink water.",
+      "level": "A1"
+    },
+    {
+      "word": "bread",
+      "translation": "bánh mì",
+      "phonetic": "/brɛd/",
+      "partOfSpeech": "Noun",
+      "definition": "Food made from flour and baked.",
+      "example": "I eat bread.",
+      "level": "A1"
+    },
+    {
+      "word": "rice",
+      "translation": "cơm, gạo",
+      "phonetic": "/raɪs/",
+      "partOfSpeech": "Noun",
+      "definition": "Small grains eaten as food.",
+      "example": "I eat rice.",
+      "level": "A1"
+    },
+    {
+      "word": "milk",
+      "translation": "sữa",
+      "phonetic": "/mɪlk/",
+      "partOfSpeech": "Noun",
+      "definition": "A white drink produced by mammals.",
+      "example": "I drink milk.",
+      "level": "A1"
+    },
+    {
+      "word": "tea",
+      "translation": "trà",
+      "phonetic": "/tiː/",
+      "partOfSpeech": "Noun",
+      "definition": "A drink made with tea leaves.",
+      "example": "I drink tea.",
+      "level": "A1"
+    },
+    {
+      "word": "coffee",
+      "translation": "cà phê",
+      "phonetic": "/ˈkɔfi/",
+      "partOfSpeech": "Noun",
+      "definition": "A drink made from coffee beans.",
+      "example": "I like coffee.",
+      "level": "A1"
+    },
+    {
+      "word": "mother",
+      "translation": "mẹ",
+      "phonetic": "/ˈmʌðər/",
+      "partOfSpeech": "Noun",
+      "definition": "A female parent.",
+      "example": "My mother is kind.",
+      "level": "A1"
+    },
+    {
+      "word": "father",
+      "translation": "bố",
+      "phonetic": "/ˈfɑðər/",
+      "partOfSpeech": "Noun",
+      "definition": "A male parent.",
+      "example": "My father is here.",
+      "level": "A1"
+    },
+    {
+      "word": "sister",
+      "translation": "chị, em gái",
+      "phonetic": "/ˈsɪstər/",
+      "partOfSpeech": "Noun",
+      "definition": "A female sibling.",
+      "example": "My sister is young.",
+      "level": "A1"
+    },
+    {
+      "word": "brother",
+      "translation": "anh, em trai",
+      "phonetic": "/ˈbrʌðər/",
+      "partOfSpeech": "Noun",
+      "definition": "A male sibling.",
+      "example": "My brother is here.",
+      "level": "A1"
+    },
+    {
+      "word": "family",
+      "translation": "gia đình",
+      "phonetic": "/ˈfæməli/",
+      "partOfSpeech": "Noun",
+      "definition": "A group of related people.",
+      "example": "I love my family.",
+      "level": "A1"
+    },
+    {
+      "word": "friend",
+      "translation": "bạn bè",
+      "phonetic": "/frɛnd/",
+      "partOfSpeech": "Noun",
+      "definition": "A person you like and know well.",
+      "example": "She is my friend.",
+      "level": "A1"
+    }
+  ],
+  "lessons": [
+    {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "unitId": "00000000-0000-4000-8000-000000000004",
+      "title": "Lời chào và phép lịch sự",
+      "position": 1,
+      "estimatedMinutes": 5,
+      "revision": {
+        "id": "00000000-0000-4000-8000-000000000020",
+        "revisionNo": 1,
+        "introduction": "DEMO — nội dung tạm để kiểm tra vòng học, chưa được người khác rà soát.",
+        "sentencePatterns": [
+          {
+            "pattern": "Hello, ...",
+            "example": "Hello, my friend.",
+            "translation": "Xin chào, bạn của tôi."
+          }
+        ]
+      },
+      "vocabularyWords": [
+        "hello",
+        "goodbye",
+        "please",
+        "thanks",
+        "yes",
+        "no"
+      ],
+      "questions": [
+        {
+          "id": "00000000-0000-4000-8000-000000000100",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: hello",
+          "explanation": "hello có nghĩa là xin chào. Ví dụ: Hello, my friend.",
+          "position": 1,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "xin chào",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "tạm biệt",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "làm ơn",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "cảm ơn",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "A"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: goodbye",
+          "explanation": "goodbye có nghĩa là tạm biệt. Ví dụ: Goodbye, see you soon.",
+          "position": 2,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "làm ơn",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "tạm biệt",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "cảm ơn",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "vâng",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "B"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000102",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: please",
+          "explanation": "please có nghĩa là làm ơn. Ví dụ: Please sit here.",
+          "position": 3,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "cảm ơn",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "vâng",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "làm ơn",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "không",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "C"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000103",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: thanks",
+          "explanation": "thanks có nghĩa là cảm ơn. Ví dụ: Thanks for your help.",
+          "position": 4,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "vâng",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "không",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "xin chào",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "cảm ơn",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "D"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000104",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: yes",
+          "explanation": "yes có nghĩa là vâng. Ví dụ: Yes, I am ready.",
+          "position": 5,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "vâng",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "không",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "xin chào",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "tạm biệt",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "A"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000105",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: no",
+          "explanation": "no có nghĩa là không. Ví dụ: No, thank you.",
+          "position": 6,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "xin chào",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "không",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "tạm biệt",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "làm ơn",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "B"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000106",
+          "type": "MEANING_CHOICE",
+          "prompt": "Ôn lại — từ này có nghĩa gì: hello",
+          "explanation": "hello có nghĩa là xin chào. Ví dụ: Hello, my friend.",
+          "position": 7,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "tạm biệt",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "làm ơn",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "xin chào",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "cảm ơn",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "C"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000107",
+          "type": "MEANING_CHOICE",
+          "prompt": "Ôn lại — từ này có nghĩa gì: goodbye",
+          "explanation": "goodbye có nghĩa là tạm biệt. Ví dụ: Goodbye, see you soon.",
+          "position": 8,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "làm ơn",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "cảm ơn",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "vâng",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "tạm biệt",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "D"
+          }
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000011",
+      "unitId": "00000000-0000-4000-8000-000000000004",
+      "title": "Đồ ăn và thức uống",
+      "position": 2,
+      "estimatedMinutes": 5,
+      "revision": {
+        "id": "00000000-0000-4000-8000-000000000021",
+        "revisionNo": 1,
+        "introduction": "DEMO — nội dung tạm để kiểm tra vòng học, chưa được người khác rà soát.",
+        "sentencePatterns": [
+          {
+            "pattern": "I like ...",
+            "example": "I drink water.",
+            "translation": "Tôi uống nước."
+          }
+        ]
+      },
+      "vocabularyWords": [
+        "water",
+        "bread",
+        "rice",
+        "milk",
+        "tea",
+        "coffee"
+      ],
+      "questions": [
+        {
+          "id": "00000000-0000-4000-8000-000000000108",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: water",
+          "explanation": "water có nghĩa là nước. Ví dụ: I drink water.",
+          "position": 1,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "nước",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "bánh mì",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "cơm, gạo",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "sữa",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "A"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000109",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: bread",
+          "explanation": "bread có nghĩa là bánh mì. Ví dụ: I eat bread.",
+          "position": 2,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "cơm, gạo",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "bánh mì",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "sữa",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "trà",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "B"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000110",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: rice",
+          "explanation": "rice có nghĩa là cơm, gạo. Ví dụ: I eat rice.",
+          "position": 3,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "sữa",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "trà",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "cơm, gạo",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "cà phê",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "C"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000111",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: milk",
+          "explanation": "milk có nghĩa là sữa. Ví dụ: I drink milk.",
+          "position": 4,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "trà",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "cà phê",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "nước",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "sữa",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "D"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000112",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: tea",
+          "explanation": "tea có nghĩa là trà. Ví dụ: I drink tea.",
+          "position": 5,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "trà",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "cà phê",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "nước",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "bánh mì",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "A"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000113",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: coffee",
+          "explanation": "coffee có nghĩa là cà phê. Ví dụ: I like coffee.",
+          "position": 6,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "nước",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "cà phê",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "bánh mì",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "cơm, gạo",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "B"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000114",
+          "type": "MEANING_CHOICE",
+          "prompt": "Ôn lại — từ này có nghĩa gì: water",
+          "explanation": "water có nghĩa là nước. Ví dụ: I drink water.",
+          "position": 7,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "bánh mì",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "cơm, gạo",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "nước",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "sữa",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "C"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000115",
+          "type": "MEANING_CHOICE",
+          "prompt": "Ôn lại — từ này có nghĩa gì: bread",
+          "explanation": "bread có nghĩa là bánh mì. Ví dụ: I eat bread.",
+          "position": 8,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "cơm, gạo",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "sữa",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "trà",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "bánh mì",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "D"
+          }
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000012",
+      "unitId": "00000000-0000-4000-8000-000000000004",
+      "title": "Gia đình và bạn bè",
+      "position": 3,
+      "estimatedMinutes": 5,
+      "revision": {
+        "id": "00000000-0000-4000-8000-000000000022",
+        "revisionNo": 1,
+        "introduction": "DEMO — nội dung tạm để kiểm tra vòng học, chưa được người khác rà soát.",
+        "sentencePatterns": [
+          {
+            "pattern": "My ... is here.",
+            "example": "My mother is kind.",
+            "translation": "Mẹ tôi tốt bụng."
+          }
+        ]
+      },
+      "vocabularyWords": [
+        "mother",
+        "father",
+        "sister",
+        "brother",
+        "family",
+        "friend"
+      ],
+      "questions": [
+        {
+          "id": "00000000-0000-4000-8000-000000000116",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: mother",
+          "explanation": "mother có nghĩa là mẹ. Ví dụ: My mother is kind.",
+          "position": 1,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "mẹ",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "bố",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "chị, em gái",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "anh, em trai",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "A"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000117",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: father",
+          "explanation": "father có nghĩa là bố. Ví dụ: My father is here.",
+          "position": 2,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "chị, em gái",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "bố",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "anh, em trai",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "gia đình",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "B"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000118",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: sister",
+          "explanation": "sister có nghĩa là chị, em gái. Ví dụ: My sister is young.",
+          "position": 3,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "anh, em trai",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "gia đình",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "chị, em gái",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "bạn bè",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "C"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000119",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: brother",
+          "explanation": "brother có nghĩa là anh, em trai. Ví dụ: My brother is here.",
+          "position": 4,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "gia đình",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "bạn bè",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "mẹ",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "anh, em trai",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "D"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000120",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: family",
+          "explanation": "family có nghĩa là gia đình. Ví dụ: I love my family.",
+          "position": 5,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "gia đình",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "bạn bè",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "mẹ",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "bố",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "A"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000121",
+          "type": "MEANING_CHOICE",
+          "prompt": "Chọn nghĩa của từ: friend",
+          "explanation": "friend có nghĩa là bạn bè. Ví dụ: She is my friend.",
+          "position": 6,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "mẹ",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "bạn bè",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "bố",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "chị, em gái",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "B"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000122",
+          "type": "MEANING_CHOICE",
+          "prompt": "Ôn lại — từ này có nghĩa gì: mother",
+          "explanation": "mother có nghĩa là mẹ. Ví dụ: My mother is kind.",
+          "position": 7,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "bố",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "chị, em gái",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "mẹ",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "anh, em trai",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "C"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000123",
+          "type": "MEANING_CHOICE",
+          "prompt": "Ôn lại — từ này có nghĩa gì: father",
+          "explanation": "father có nghĩa là bố. Ví dụ: My father is here.",
+          "position": 8,
+          "weight": 1,
+          "options": [
+            {
+              "key": "A",
+              "label": "chị, em gái",
+              "position": 1
+            },
+            {
+              "key": "B",
+              "label": "anh, em trai",
+              "position": 2
+            },
+            {
+              "key": "C",
+              "label": "gia đình",
+              "position": 3
+            },
+            {
+              "key": "D",
+              "label": "bố",
+              "position": 4
+            }
+          ],
+          "answerKey": {
+            "optionKey": "D"
+          }
+        }
+      ]
+    }
+  ]
+}

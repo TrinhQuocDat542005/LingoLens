@@ -77,22 +77,21 @@ fun SettingsScreen(navController: NavController, user: UserProfileDto, authViewM
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    // Target Level Selection
-                    Row(
+                    // Keep A1 selectable without changing existing B1/B2 accounts.
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Column {
                             Text("Trình độ mục tiêu", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                             Text("Quyết định từ vựng và câu ví dụ", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                         }
 
-                        // Segmented Button/Toggles for B1 vs B2
+                        // Supported profile levels.
                         Row(
                             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)).padding(4.dp)
                         ) {
-                            listOf("B1", "B2").forEach { lvl ->
+                            listOf("A1", "B1", "B2").forEach { lvl ->
                                 val isSelected = user.targetLevel == lvl
                                 Button(
                                     onClick = { authViewModel.updateProfile(user.name, lvl, user.dailyGoal) },

@@ -15,13 +15,13 @@ import java.security.Principal
 @RestController
 @RequestMapping("/api/v1/auth")
 @Tag(name = "Authentication")
-class AuthController(private val authService: AuthService) {
+class AuthController(private val authService: AuthService, private val profiles: com.quocdat.lingolens.settings.ProfileAdapter) {
     @PostMapping("/register")
     @Operation(summary = "Register a new user")
     fun register(@Valid @RequestBody request: RegisterRequest): ResponseEntity<ApiResponse<UserProfileResponse>> {
         val user = authService.register(request)
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success("Registration successful", UserProfileResponse.from(user)))
+            .body(ApiResponse.success("Registration successful", profiles.read(user)))
     }
 
     @PostMapping("/login")

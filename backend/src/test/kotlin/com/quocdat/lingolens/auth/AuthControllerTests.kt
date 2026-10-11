@@ -30,6 +30,14 @@ class AuthControllerTests {
     @Autowired lateinit var roles: RoleRepository
 
     private fun email() = "test-${UUID.randomUUID()}@lingolens.dev"
+    @Test fun `lesson endpoints require authentication and validate API input before database work`() {
+        mockMvc.perform(get("/api/v1/curriculum")).andExpect(status().isUnauthorized)
+        val email=email(); register(email).andExpect(status().isCreated)
+        val token=login(email).path("accessToken").asText()
+        mockMvc.perform(post("/api/v1/lesson-attempts").header("Authorization","Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"id":"${UUID.randomUUID()}","lessonRevisionId":"${UUID.randomUUID()}","mode":"UNKNOWN","clientCompletedAt":0,"submittedOffline":false,"answers":[]}"""))
+            .andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+    }
     private fun register(email: String, password: String = "Secure123!") = mockMvc.perform(
         post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
             .content(mapper.writeValueAsString(RegisterRequest(email, password, "Test User")))

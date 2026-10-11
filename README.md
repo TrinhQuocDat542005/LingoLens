@@ -1,12 +1,19 @@
 # LingoLens
 
-**Learn English from your surroundings with on-device object recognition.**
+**Learn English through guided lessons and on-device discovery.**
 
 [![CI](https://github.com/TrinhQuocDat542005/LingoLens/actions/workflows/ci.yml/badge.svg)](https://github.com/TrinhQuocDat542005/LingoLens/actions/workflows/ci.yml)
 
-LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin console. Capture everyday objects, select a detected bounding box and explore English vocabulary. Images are processed on the phone and are not uploaded to the API.
+LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin console. The week 5 feature branch adds a first guided lesson: study vocabulary, answer meaning questions and earn server-confirmed XP. Capture everyday objects, select a detected bounding box and explore English vocabulary. Images are processed on the phone and are not uploaded to the API.
+
+**Week 5 status:** implementation is on `codex/week5/step1-settings`, awaiting owner testing before acceptance and merge. Three lessons are seeded as **dev/test DEMO content**; the Android flow currently covers the first lesson. See the [dev setup and manual test guide](docs/product/week5-testing.md). DEMO content is rejected in production.
 
 ## Implemented features
+
+- First guided lesson with vocabulary snapshots, sentence patterns, meaning questions and correct/total results.
+- Server grading with an integer weighted 70% threshold, one-time lesson XP and idempotent attempt UUIDs.
+- Android SavedStateHandle recovery for rotation/system recreation, with a frozen retry payload; lesson attempts use direct online requests.
+- Compatible legacy profile API backed by learner settings; PostgreSQL migrations and a manual checksum-based dev/test seed importer.
 
 - CameraX capture, EXIF orientation handling and image downsampling.
 - Bundled EfficientDet-Lite0 INT8 detection, selectable boxes, confidence and inference timing.
@@ -32,9 +39,11 @@ LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin con
 4. Play the English pronunciation, save the word and check My Words / Stats and the sync status card.
 5. Reopen the app: the saved word remains. Switch accounts: each account has its own library.
 6. Open Review, recall the word, reveal the answer and grade it. Interrupt another session and reopen to resume; reconnect to restore schedules and answers on another installation.
-6. After Home downloads the catalog, disconnect the network and save/delete words or queue a correction. Reconnect: the pending count drains automatically; **Sync / retry** also requests a run.
-7. Sign in with the same account on another installation and sync to restore the saved library and first-learning history.
-8. Edit/publish vocabulary in the admin console, use **Refresh content** on the result screen and see the revised content.
+7. After Home downloads the catalog, disconnect the network and save/delete words or queue a correction. Reconnect: the pending count drains automatically; **Sync / retry** also requests a run.
+8. Sign in with the same account on another installation and sync to restore the saved library and first-learning history.
+9. Edit/publish vocabulary in the admin console, use **Refresh content** on the result screen and see the revised content.
+
+For the first guided lesson, seed the DEMO pack explicitly and open **Home → Mở bài học**. See [week 5 testing](docs/product/week5-testing.md) for backend/ADB commands, expected XP and retry/rotation/network scenarios. Offline lesson packs, durable lesson outbox and the PRACTICE UI are pending later work; saved-word/review synchronization remains available.
 
 On-device processing keeps captured images off the server. Saved snapshots contain vocabulary text; temporary image paths are not persisted in the library.
 

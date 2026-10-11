@@ -28,6 +28,7 @@ class AuthService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val passwordEncoder: PasswordEncoder,
     private val jwtService: JwtService,
+    private val profiles: com.quocdat.lingolens.settings.ProfileAdapter,
     @Value("\${security.jwt.expiration-time}") private val accessExpirationTime: Long,
     @Value("\${security.jwt.refresh-expiration-time}") private val refreshExpirationTime: Long
 ) {
@@ -39,14 +40,14 @@ class AuthService(
         }
         val userRole = roleRepository.findByName("ROLE_USER")
             .orElseThrow { IllegalStateException("Default role ROLE_USER not found") }
-        return userRepository.save(
+        return userRepository.saveAndFlush(
             User(
                 email = normalizedEmail,
                 password = passwordEncoder.encode(request.password),
                 name = request.name.trim(),
                 roles = mutableSetOf(userRole)
             )
-        )
+        ).also { profiles.initialize(it) }
     }
 
     @Transactional
