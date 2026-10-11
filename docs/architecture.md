@@ -6,9 +6,15 @@ Android captures images, corrects orientation, checks quality and runs a bundled
 
 Images stay in Android cache and are cleaned after 24 hours when creating another capture. The API receives metadata and correction reports, not images. History synchronization currently records the primary detection, not every selected object.
 
-The API owns accounts, roles, hashed refresh tokens, published vocabulary, recognition history, correction reports and admin audit logs. Flyway migrates PostgreSQL at startup; Hibernate validates the schema. Admin vocabulary is not yet connected to Android's sample dictionary.
+The API owns accounts, roles, hashed refresh tokens, published vocabulary, recognition history, correction reports and admin audit logs. Flyway migrates PostgreSQL at startup; Hibernate validates the schema. Android reads only published vocabulary through authenticated catalog/lookup endpoints.
 
-Android's word list is currently a process-wide in-memory sample repository. It is not persistent or account-scoped. Room, user ownership and background sync are the next milestone.
+Room is Android's persistent library and catalog store. Saved words and first-learning events use `(accountId, normalizedWord)` composite keys. Every read/write supplies the signed-in account ID, and navigation is recreated when the account changes. Save and first-event insertion are atomic; deleting a library entry leaves historical learning activity intact.
+
+The shared catalog contains published vocabulary only. A full refresh stages all pages before replacing cache rows in a single transaction. Saved personal snapshots are separate from the catalog: withdrawing publication removes shared content at the next successful catalog refresh or lookup, but preserves words the learner previously saved. Cache content is explicitly labeled and manual refresh checks the server. This is a snapshot cache, not a server revocation mechanism.
+
+Learning statistics use first-save events and local calendar dates. The total library count changes on deletion; historical daily counts do not. Pronunciation uses the device TTS engine, checks English language availability, stops on lifecycle pause and shuts down when its composition is disposed.
+
+Session restoration caches a matching profile after successful server calls and uses it only on network failures. HTTP authentication rejection clears the session; transient refresh transport failures do not. Tokens, profiles and the learning database are excluded from backup and device transfer. Local data remains after logout so the same account can recover its library on the same installation; uninstalling removes it.
 
 ## Separate builds in a monorepo
 
@@ -34,7 +40,7 @@ JWT key length is checked at startup. The public example development secret is f
 
 - H2 API tests: auth lifecycle, disabled users, removed admin role, validation and recognition/report flow.
 - `postgresTest`: all migrations, seed content, recognition ownership and duplicate reports on a real container. Missing Docker fails this task instead of silently skipping it.
-- Android: unit tests for validation, labels/confidence, quality and bounding boxes; lint and APK assembly.
+- Android: validation/recognition tests, date/streak tests and Robolectric SQLite tests for Room persistence, account isolation, deduplication, cache failures and publication withdrawal; lint and APK assembly.
 - Admin: locked dependency installation, TypeScript and Vite build.
 - Compose CI: image build, database readiness, migrations and API health.
 - Physical device: permissions/orientation, selecting boxes, lifecycle and model quality. JVM tests do not replace these checks.

@@ -34,7 +34,12 @@ fun AppNavigation() {
     when (val session = authViewModel.session.collectAsState().value) {
         SessionState.Loading -> SplashScreen()
         SessionState.SignedOut -> AuthNavigation(authViewModel)
-        is SessionState.SignedIn -> MainNavigation(authViewModel, session.profile)
+        is SessionState.SignedIn -> key(session.profile.id) {
+            CompositionLocalProvider(com.quocdat.lingolens.ui.learning.LocalLearningSession provides
+                com.quocdat.lingolens.ui.learning.LearningSession(application.container, session.profile)) {
+                MainNavigation(authViewModel, session.profile)
+            }
+        }
     }
 }
 

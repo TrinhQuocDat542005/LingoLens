@@ -28,7 +28,14 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     private val _form = MutableStateFlow(AuthFormState())
     val form: StateFlow<AuthFormState> = _form.asStateFlow()
 
-    init { restore() }
+    init {
+        restore()
+        viewModelScope.launch {
+            repository.session.collect { stored ->
+                if (stored == null && _session.value is SessionState.SignedIn) _session.value = SessionState.SignedOut
+            }
+        }
+    }
 
     fun restore() = viewModelScope.launch {
         _session.value = SessionState.Loading

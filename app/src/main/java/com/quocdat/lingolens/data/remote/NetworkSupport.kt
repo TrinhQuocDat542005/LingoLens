@@ -33,8 +33,8 @@ class TokenAuthenticator(private val storage: SessionStorage, private val authAp
                 val refreshed = authApi.refresh(RefreshRequest(session.refreshToken)).data ?: return@runBlocking null
                 storage.save(refreshed)
                 response.request.newBuilder().header("Authorization", "Bearer ${refreshed.accessToken}").build()
-            } catch (_: Exception) {
-                storage.clear()
+            } catch (ex: Exception) {
+                if (ex is HttpException && ex.code() in listOf(401, 403)) storage.clear()
                 null
             }
         }

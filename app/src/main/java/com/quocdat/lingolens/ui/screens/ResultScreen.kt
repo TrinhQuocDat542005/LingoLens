@@ -91,8 +91,10 @@ import com.quocdat.lingolens.recognition.RecognitionUiState
 import com.quocdat.lingolens.recognition.RecognitionViewModel
 import com.quocdat.lingolens.recognition.RecognitionSyncState
 import com.quocdat.lingolens.recognition.SupportedVocabulary
-import com.quocdat.lingolens.service.FakeDictionaryService
-import com.quocdat.lingolens.service.FakeWordRepository
+import com.quocdat.lingolens.ui.learning.LocalLearningSession
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -110,7 +112,26 @@ fun ResultScreen(navController: NavController, word: String, imageUri: String? =
     var selectedWord by remember(imageUri) { mutableStateOf(if (uri == null) word else null) }
     var showManualPicker by remember { mutableStateOf(false) }
     var showReportDialog by remember { mutableStateOf(false) }
-    val learnedWord = selectedWord?.let { remember(it) { FakeDictionaryService.lookupWord(it) } }
+    val session = LocalLearningSession.current
+    val scope = rememberCoroutineScope()
+    var lookupAttempt by remember { mutableStateOf(0) }
+    var loading by remember { mutableStateOf(false) }
+    var lookupMessage by remember { mutableStateOf<String?>(null) }
+    var learnedWord by remember { mutableStateOf<LearnedWord?>(null) }
+    var saving by remember { mutableStateOf(false) }
+    LaunchedEffect(selectedWord, lookupAttempt, session.profile.id) {
+        learnedWord = null
+        lookupMessage = null
+        val selected = selectedWord ?: return@LaunchedEffect
+        loading = true
+        try {
+            val result = container.vocabularyRepository.lookup(session.profile.id, selected, refresh = lookupAttempt > 0)
+            learnedWord = result.word
+            lookupMessage = result.message
+        } catch (ex: kotlinx.coroutines.CancellationException) { throw ex
+        } catch (ex: Exception) { lookupMessage = "Không tải được nội dung. Kiểm tra phiên đăng nhập rồi thử lại."
+        } finally { loading = false }
+    }
     val imageState by produceState<CapturedBitmapState>(
         initialValue = if (uri == null) CapturedBitmapState.NotRequested else CapturedBitmapState.Loading,
         uri
@@ -176,7 +197,10 @@ fun ResultScreen(navController: NavController, word: String, imageUri: String? =
                 )
             }
 
-            learnedWord?.let { WordResultContent(it, context) }
+            if (loading) CircularProgressIndicator()
+            lookupMessage?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (selectedWord != null && !loading) TextButton(onClick = { lookupAttempt++ }) { Text("Làm mới nội dung") }
+            learnedWord?.let { WordResultContent(it) }
 
             if (recognitionState is RecognitionUiState.Success) {
                 RecognitionFeedbackCard(syncState = syncState, onReport = { showReportDialog = true })
@@ -190,18 +214,26 @@ fun ResultScreen(navController: NavController, word: String, imageUri: String? =
                 ) {
                     Icon(Icons.Default.Refresh, "Chụp lại")
                     Spacer(Modifier.width(6.dp))
-                    Text("Chụp lại")
+                    Text(if (uri == null) "Quay lại" else "Chụp lại")
                 }
                 if (learnedWord != null) {
                     Button(
                         onClick = {
-                            FakeWordRepository.saveWord(learnedWord)
-                            deleteCapturedImage()
-                            Toast.makeText(context, "Đã lưu từ '${learnedWord.word}'", Toast.LENGTH_SHORT).show()
-                            navController.navigate(Screen.MyWords.route) {
-                                popUpTo(Screen.Home.route) { inclusive = false }
+                            val snapshot = learnedWord ?: return@Button
+                            saving = true
+                            scope.launch {
+                                try {
+                                    container.learningRepository.save(session.profile.id, snapshot)
+                                    deleteCapturedImage()
+                                    Toast.makeText(context, "Đã lưu từ '${snapshot.word}'", Toast.LENGTH_SHORT).show()
+                                    navController.navigate(Screen.MyWords.route) { popUpTo(Screen.Home.route) }
+                                } catch (ex: kotlinx.coroutines.CancellationException) { throw ex
+                                } catch (ex: Exception) {
+                                    Toast.makeText(context, "Không lưu được từ. Thử lại.", Toast.LENGTH_SHORT).show()
+                                } finally { saving = false }
                             }
                         },
+                        enabled = !saving,
                         modifier = Modifier.weight(1f).height(52.dp),
                         shape = RoundedCornerShape(14.dp)
                     ) {
@@ -541,7 +573,7 @@ private fun ManualWordPicker(onSelect: (String) -> Unit) {
 }
 
 @Composable
-private fun WordResultContent(learnedWord: LearnedWord, context: Context) {
+private fun WordResultContent(learnedWord: LearnedWord) {
     Card(
         Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -552,18 +584,12 @@ private fun WordResultContent(learnedWord: LearnedWord, context: Context) {
                 color = MaterialTheme.colorScheme.primary, letterSpacing = 1.sp)
             Spacer(Modifier.height(8.dp))
             Text(learnedWord.word.uppercase(), fontSize = 32.sp, fontWeight = FontWeight.Black)
-            Text("/${learnedWord.word}/", fontStyle = FontStyle.Italic)
+            learnedWord.phonetic?.takeIf { it.isNotBlank() }?.let { Text(it, fontStyle = FontStyle.Italic) }
             Spacer(Modifier.height(8.dp))
             Text(learnedWord.translation, fontSize = 20.sp, fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.secondary)
             Spacer(Modifier.height(12.dp))
-            Button(onClick = {
-                Toast.makeText(context, "Phát âm mẫu: ${learnedWord.word}", Toast.LENGTH_SHORT).show()
-            }) {
-                Icon(Icons.Default.PlayArrow, "Phát âm")
-                Spacer(Modifier.width(6.dp))
-                Text("Phát âm")
-            }
+            PronunciationButton(learnedWord.word)
         }
     }
     Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {

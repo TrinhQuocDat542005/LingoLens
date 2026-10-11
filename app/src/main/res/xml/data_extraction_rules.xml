@@ -5,9 +5,15 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="database" path="learning.db"/>
+        <exclude domain="database" path="learning.db-wal"/>
+        <exclude domain="database" path="learning.db-shm"/>
         <exclude domain="file" path="datastore/secure_session.preferences_pb"/>
     </cloud-backup>
     <device-transfer>
+        <exclude domain="database" path="learning.db"/>
+        <exclude domain="database" path="learning.db-wal"/>
+        <exclude domain="database" path="learning.db-shm"/>
         <exclude domain="file" path="datastore/secure_session.preferences_pb"/>
     </device-transfer>
 </data-extraction-rules>

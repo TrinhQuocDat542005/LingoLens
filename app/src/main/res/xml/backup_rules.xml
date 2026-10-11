@@ -6,5 +6,8 @@
    See https://developer.android.com/about/versions/12/backup-restore
 -->
 <full-backup-content>
+    <exclude domain="database" path="learning.db"/>
+    <exclude domain="database" path="learning.db-wal"/>
+    <exclude domain="database" path="learning.db-shm"/>
     <exclude domain="file" path="datastore/secure_session.preferences_pb"/>
 </full-backup-content>

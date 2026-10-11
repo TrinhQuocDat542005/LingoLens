@@ -75,6 +75,24 @@ class PostgresIntegrationTests {
             "SELECT COUNT(*) FROM recognition_reports WHERE recognition_history_id = ?", Int::class.java, id)!!)
     }
 
+    @Test fun `published vocabulary lookup and search work on PostgreSQL`() {
+        val email = "catalog-${UUID.randomUUID()}@lingolens.dev"
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(RegisterRequest(email, "Secure123!", "Catalog User"))))
+            .andExpect(status().isCreated)
+        val response = mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(LoginRequest(email, "Secure123!"))))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+        val access = mapper.readTree(response).path("data").path("accessToken").asText()
+        mockMvc.perform(get("/api/v1/vocabularies/BOOK").header("Authorization", "Bearer $access"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.data.word").value("book"))
+        jdbc.update("UPDATE vocabularies SET is_published = FALSE WHERE word = 'book'")
+        mockMvc.perform(get("/api/v1/vocabularies/book").header("Authorization", "Bearer $access"))
+            .andExpect(status().isNotFound)
+        mockMvc.perform(get("/api/v1/vocabularies").param("search", "book").header("Authorization", "Bearer $access"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.data.content.length()").value(0))
+    }
+
     companion object {
         @Container @JvmField
         val postgres = PostgreSQLContainer<Nothing>("postgres:15-alpine")

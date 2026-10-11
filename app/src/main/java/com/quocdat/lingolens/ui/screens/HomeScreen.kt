@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,15 +28,40 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.quocdat.lingolens.model.LearnedWord
 import com.quocdat.lingolens.navigation.Screen
-import com.quocdat.lingolens.service.FakeWordRepository
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.quocdat.lingolens.ui.learning.LocalLearningSession
+import com.quocdat.lingolens.ui.learning.LearningStats
+import com.quocdat.lingolens.model.User
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
-    val user by FakeWordRepository.currentUser.collectAsState()
-    val words by FakeWordRepository.learnedWords.collectAsState()
+    val session = LocalLearningSession.current
+    val repository = session.container.learningRepository
+    val words by remember(session.profile.id) { repository.words(session.profile.id) }.collectAsState(initial = emptyList())
+    val events by remember(session.profile.id) { repository.events(session.profile.id) }.collectAsState(initial = emptyList())
+    val stats = LearningStats.calculate(events)
+    val user = User(session.profile.name, session.profile.targetLevel, stats.streak, words.size, session.profile.dailyGoal)
+    val scope = rememberCoroutineScope()
+    var catalogMessage by remember { androidx.compose.runtime.mutableStateOf("Đang tải kho từ…") }
+    var refreshing by remember { androidx.compose.runtime.mutableStateOf(false) }
+    fun refreshCatalog() {
+        if (refreshing) return
+        refreshing = true
+        scope.launch {
+            try {
+                session.container.vocabularyRepository.refreshCatalog()
+                catalogMessage = "Kho từ đã cập nhật. Có thể tra nội dung đã tải khi mất mạng."
+            } catch (ex: kotlinx.coroutines.CancellationException) { throw ex
+            } catch (ex: Exception) { catalogMessage = "Kho từ chưa cập nhật. Nội dung đã tải vẫn sử dụng được."
+            } finally { refreshing = false }
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(session.profile.id) { refreshCatalog() }
     val recentWords = words.take(5)
 
     Scaffold(
@@ -63,6 +89,14 @@ fun HomeScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Welcome Header
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(catalogMessage, style = MaterialTheme.typography.bodySmall)
+                        TextButton(enabled = !refreshing, onClick = { refreshCatalog() }) { Text("Cập nhật kho từ") }
+                    }
+                }
+            }
             item {
                 Text(
                     text = "Chào mừng quay trở lại, ${user.name}!",
@@ -118,7 +152,7 @@ fun HomeScreen(navController: NavController) {
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Đã lưu: ${user.wordsLearnedCount} từ (${user.targetLevel})",
+                                    text = "Hôm nay: ${stats.todayCount}/${user.dailyGoalCount} • Sổ tay: ${words.size} từ",
                                     fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                 )
@@ -127,7 +161,7 @@ fun HomeScreen(navController: NavController) {
                             // Circular Progress Indicator
                             Box(contentAlignment = Alignment.Center) {
                                 val progress = if (user.dailyGoalCount > 0) {
-                                    user.wordsLearnedCount.toFloat() / user.dailyGoalCount
+                                    stats.todayCount.toFloat() / user.dailyGoalCount
                                 } else 0f
                                 CircularProgressIndicator(
                                     progress = { progress.coerceIn(0f, 1f) },

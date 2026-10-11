@@ -26,18 +26,31 @@ class AuthRepository(
         val tokens = authApi.login(LoginRequest(email.trim(), password)).data
             ?: throw ApiException("EMPTY_RESPONSE", "Máy chủ không trả về phiên đăng nhập.")
         storage.save(tokens)
-        userApi.getMe().data ?: throw ApiException("EMPTY_PROFILE", "Không tải được hồ sơ người dùng.")
+        (userApi.getMe().data ?: throw ApiException("EMPTY_PROFILE", "Không tải được hồ sơ người dùng.")).also { storage.saveProfile(it) }
     }
 
     suspend fun restoreSession(): Result<UserProfileDto?> {
         if (storage.current() == null) return Result.success(null)
-        return apiCall { userApi.getMe().data ?: throw ApiException("EMPTY_PROFILE", "Không tải được hồ sơ.") }
-            .onFailure { storage.clear() }
+        return try {
+            val profile = userApi.getMe().data ?: throw ApiException("EMPTY_PROFILE", "Không tải được hồ sơ.")
+            storage.saveProfile(profile)
+            Result.success(profile)
+        } catch (ex: kotlinx.coroutines.CancellationException) { throw ex
+        } catch (ex: retrofit2.HttpException) {
+            if (ex.code() == 401 || ex.code() == 403) storage.clear()
+            Result.failure(ApiException("RESTORE_FAILED", ex.toUserMessage(gson)))
+        } catch (ex: java.io.IOException) {
+            val cached = storage.cachedProfile()
+            if (cached != null && storage.current() != null) Result.success(cached)
+            else Result.failure(ApiException("RESTORE_FAILED", ex.toUserMessage(gson)))
+        } catch (ex: Exception) {
+            Result.failure(ApiException("RESTORE_FAILED", ex.toUserMessage(gson)))
+        }
     }
 
     suspend fun updateProfile(name: String, level: String, dailyGoal: Int): Result<UserProfileDto> = apiCall {
-        userApi.updateMe(UpdateProfileRequest(name, level, dailyGoal)).data
-            ?: throw ApiException("EMPTY_PROFILE", "Không tải được hồ sơ.")
+        (userApi.updateMe(UpdateProfileRequest(name, level, dailyGoal)).data
+            ?: throw ApiException("EMPTY_PROFILE", "Không tải được hồ sơ.")).also { storage.saveProfile(it) }
     }
 
     suspend fun logout(): Result<Unit> {
@@ -45,7 +58,8 @@ class AuthRepository(
         return try {
             if (session != null) authApi.logout(LogoutRequest(session.refreshToken))
             Result.success(Unit)
-        } catch (error: Throwable) {
+        } catch (error: kotlinx.coroutines.CancellationException) { throw error
+        } catch (error: Exception) {
             Result.failure(ApiException("LOGOUT_FAILED", error.toUserMessage(gson)))
         } finally {
             storage.clear()
@@ -54,7 +68,8 @@ class AuthRepository(
 
     private suspend fun <T> apiCall(block: suspend () -> T): Result<T> = try {
         Result.success(block())
-    } catch (error: Throwable) {
+    } catch (error: kotlinx.coroutines.CancellationException) { throw error
+    } catch (error: Exception) {
         Result.failure(ApiException("API_ERROR", error.toUserMessage(gson)))
     }
 }

@@ -17,6 +17,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 class AppContainer(context: Context) {
+    private val learningDatabase = androidx.room.Room.databaseBuilder(context.applicationContext,
+        com.quocdat.lingolens.data.local.LearningDatabase::class.java, "learning.db").build()
+    val learningRepository = com.quocdat.lingolens.data.repository.LearningRepository(learningDatabase)
     private val gson = Gson()
     private val storage = SessionStorage(context)
     private val baseUrl = BuildConfig.API_BASE_URL
@@ -62,4 +65,7 @@ class AppContainer(context: Context) {
         api = authenticatedRetrofit.create(RecognitionApi::class.java),
         gson = gson
     )
+    val vocabularyRepository = com.quocdat.lingolens.data.repository.VocabularyRepository(
+        authenticatedRetrofit.create(com.quocdat.lingolens.data.repository.VocabularyApi::class.java),
+        learningDatabase, learningRepository)
 }

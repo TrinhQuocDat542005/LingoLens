@@ -12,6 +12,7 @@ import com.quocdat.lingolens.user.User
 interface VocabularyRepository : JpaRepository<Vocabulary, Long> {
     fun existsByWordIgnoreCase(word: String): Boolean
     fun findByWordIgnoreCase(word: String): Optional<Vocabulary>
+    fun findByWordIgnoreCaseAndPublishedTrue(word: String): Optional<Vocabulary>
     fun countByPublishedTrue(): Long
 
     @Query("""select v from Vocabulary v where

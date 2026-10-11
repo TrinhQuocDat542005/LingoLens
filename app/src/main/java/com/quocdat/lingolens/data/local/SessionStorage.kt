@@ -20,6 +20,7 @@ class SessionStorage(private val context: Context) {
         val refresh = stringPreferencesKey("refresh_token")
         val email = stringPreferencesKey("user_email")
         val name = stringPreferencesKey("user_name")
+        val profile = stringPreferencesKey("cached_profile")
     }
 
     val session: Flow<StoredSession?> = context.sessionDataStore.data.map { prefs ->
@@ -37,11 +38,25 @@ class SessionStorage(private val context: Context) {
 
     suspend fun save(tokens: TokenDto) {
         context.sessionDataStore.edit {
+            if (it[Keys.email] != tokens.email) it.remove(Keys.profile)
             it[Keys.access] = cipher.encrypt(tokens.accessToken)
             it[Keys.refresh] = cipher.encrypt(tokens.refreshToken)
             it[Keys.email] = tokens.email
             it[Keys.name] = tokens.name
         }
+    }
+
+    suspend fun saveProfile(profile: com.quocdat.lingolens.data.remote.dto.UserProfileDto) {
+        context.sessionDataStore.edit {
+            if (it[Keys.email] == profile.email) it[Keys.profile] = com.google.gson.Gson().toJson(profile)
+        }
+    }
+
+    suspend fun cachedProfile(): com.quocdat.lingolens.data.remote.dto.UserProfileDto? {
+        val prefs = context.sessionDataStore.data.first()
+        return prefs[Keys.profile]?.let {
+            runCatching { com.google.gson.Gson().fromJson(it, com.quocdat.lingolens.data.remote.dto.UserProfileDto::class.java) }.getOrNull()
+        }?.takeIf { it.email == prefs[Keys.email] }
     }
 
     suspend fun clear() = context.sessionDataStore.edit { it.clear() }

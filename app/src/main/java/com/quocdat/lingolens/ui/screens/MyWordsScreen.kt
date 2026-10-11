@@ -23,13 +23,19 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.quocdat.lingolens.model.LearnedWord
 import com.quocdat.lingolens.navigation.Screen
-import com.quocdat.lingolens.service.FakeWordRepository
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.quocdat.lingolens.ui.learning.LocalLearningSession
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyWordsScreen(navController: NavController) {
     val context = LocalContext.current
-    val words by FakeWordRepository.learnedWords.collectAsState()
+    val session = LocalLearningSession.current
+    val repository = session.container.learningRepository
+    val words by remember(session.profile.id) { repository.words(session.profile.id) }.collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedPartOfSpeechFilter by remember { mutableStateOf("Tất cả") }
@@ -126,8 +132,15 @@ fun MyWordsScreen(navController: NavController) {
                                 navController.navigate(Screen.Result.createRoute(word.word))
                             },
                             onDeleteClick = {
-                                FakeWordRepository.deleteWord(word.id)
-                                Toast.makeText(context, "Đã xóa từ '${word.word}'", Toast.LENGTH_SHORT).show()
+                                scope.launch {
+                                    try {
+                                        repository.delete(session.profile.id, word.word)
+                                        Toast.makeText(context, "Đã xóa từ '${word.word}'", Toast.LENGTH_SHORT).show()
+                                    } catch (ex: kotlinx.coroutines.CancellationException) { throw ex
+                                    } catch (ex: Exception) {
+                                        Toast.makeText(context, "Không xóa được từ. Thử lại.", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                             }
                         )
                     }

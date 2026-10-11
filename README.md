@@ -12,11 +12,26 @@ LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin con
 - Bundled EfficientDet-Lite0 INT8 detection, selectable boxes, confidence and inference timing.
 - Image quality warnings, ML Kit Image Labeling fallback and manual word selection.
 - Registration/login, encrypted Android session storage, hashed/rotating refresh tokens and role-based access.
+- Room-backed word library isolated by account, durable learning events and local progress statistics.
+- Published vocabulary API, transactional catalog cache refresh and offline access to downloaded/saved content.
+- Real device Text-to-Speech with language availability checks and lifecycle cleanup.
 - Recognition history and correction reports synchronized to the API.
 - Admin console for user status/roles, vocabulary publishing, correction review and audit logs.
 - Flyway migrations, API/unit tests, PostgreSQL integration tests and CI build artifacts.
 
-**Current limits:** My Words and learning statistics use an in-memory sample repository. Dictionary content is local/sample content; pronunciation is a placeholder. Recognition works offline, but session restoration and history sync require the API. Persistent learning, background sync, real pronunciation and spaced repetition are next milestones. Device model accuracy has not yet been measured; see the [evaluation protocol](docs/model-evaluation/README.md).
+**Current limits:** Saved words and learning events stay on one device; cloud synchronization and spaced repetition are planned. First login and first content download require the API. A previously signed-in account can reopen using its cached profile during a network outage; offline access cannot detect server-side account revocation until reconnection. TTS depends on an installed English voice and the engine may require a network connection. Model accuracy has not yet been measured; see the [evaluation protocol](docs/model-evaluation/README.md).
+
+## Try the learning loop
+
+1. Start the API and admin console, then install the Android debug APK.
+2. Register a learner. Home starts with an empty library and zero activity.
+3. Capture a supported object (for example, a book), choose a detection and open its published vocabulary.
+4. Play the English pronunciation, save the word and check My Words / Stats.
+5. Reopen the app: the saved word remains. Switch accounts: each account has its own library.
+6. After Home downloads the catalog, disconnect the network and browse downloaded/saved words. Use **Update catalog** or **Refresh content** after reconnecting.
+7. Edit/publish vocabulary in the admin console, use **Refresh content** on the result screen and see the revised content.
+
+On-device processing keeps captured images off the server. Saved snapshots contain vocabulary text; temporary image paths are not persisted in the library.
 
 ## Architecture
 
@@ -26,7 +41,11 @@ flowchart LR
     Vision --> Result[Compose result / box selection]
     Vision --> Fallback[ML Kit / manual selection]
     Fallback --> Result
-    Result --> Sample[Local sample dictionary / words]
+    Result --> Cache[Room: catalog / account word library]
+    Result --> TTS[Device Text-to-Speech]
+    Cache --> Progress[Local learning events / statistics]
+    API --> Catalog[Published vocabulary]
+    Catalog --> Cache
     Result --> API[Spring Boot: history / corrections]
     Android[Android auth / profile] --> API
     Admin[React admin] --> API
@@ -35,7 +54,7 @@ flowchart LR
 
 | Part | Stack | Directory |
 | --- | --- | --- |
-| Android | Kotlin, Compose, CameraX, MediaPipe, ML Kit, Retrofit, DataStore, Keystore | `app/` |
+| Android | Kotlin, Compose, CameraX, MediaPipe, ML Kit, Retrofit, Room, DataStore, Keystore, TTS | `app/` |
 | API | Kotlin, Spring Boot/Security, JWT, JPA, Flyway, OpenAPI | `backend/` |
 | Admin | React, TypeScript, Vite | `admin-dashboard/` |
 | Database | PostgreSQL 15 | `docker-compose.yml` |
@@ -141,6 +160,29 @@ npm run build
 
 [CI](.github/workflows/ci.yml) covers Android tests/lint/build, backend H2/PostgreSQL tests/packaging, admin build and Compose API startup. Reports, debug APK and admin output are workflow artifacts. Camera behavior and model accuracy remain physical-device checks.
 
+## Data and offline behavior
+
+| Data | Owner / storage | Offline behavior |
+| --- | --- | --- |
+| Published vocabulary | API / PostgreSQL, shared Room cache | Read after download; manual refresh checks latest publication |
+| Saved words | Account ID + normalized word / Room | Save, delete and reopen locally; no cloud sync yet |
+| Learning events | First save per account and word / Room | Drive daily counts, 7-day activity and streak |
+| Session | Keystore-encrypted tokens + cached profile / DataStore | Cached profile only on connection failure; rejected credentials do not restore it |
+| Recognition history / corrections | API / PostgreSQL | Sync needs connection; durable retry queue is planned |
+
+A word is counted as newly learned only on its first save for that account. Deleting a word removes it from the library while retaining its first learning event; resaving does not inflate progress. Streak counts consecutive active local calendar days, allowing an unfinished current day. Vocabulary refresh downloads every page before replacing the cache in one transaction. A lookup returning `404` evicts the shared cache entry; an existing personal saved snapshot remains accessible with a notice. Account data and tokens are excluded from Android backup/device transfer.
+
+### Published vocabulary endpoints
+
+Bearer authentication is required. Drafts are excluded from both endpoints.
+
+```http
+GET /api/v1/vocabularies?search=book&page=0&size=50
+GET /api/v1/vocabularies/book
+```
+
+The catalog returns `data.content` and `data.totalPages`; size is bounded to 1–100. Lookup matches case-insensitively and returns a structured `404 / VOCABULARY_NOT_FOUND` for absent or unpublished words. Unknown words do not receive fabricated definitions, translations or phonetics.
+
 ## Model provenance
 
 The bundled EfficientDet-Lite0 INT8 model is pretrained for COCO and used through MediaPipe Tasks Vision. It is not trained specifically for LingoLens.
@@ -153,7 +195,7 @@ The bundled EfficientDet-Lite0 INT8 model is pretrained for COCO and used throug
 ## Milestones
 
 1. Reproducible setup, auth fixes, CI and documentation — [week 1 report](docs/portfolio/week1.md).
-2. Persistent words per account, vocabulary API/cache and real Text-to-Speech.
+2. Persistent words per account, vocabulary API/cache, local learning statistics and real Text-to-Speech — [week 2 report](docs/portfolio/week2.md).
 3. Offline write queue, retry and idempotent sync.
-4. Spaced repetition and real progress statistics.
+4. Spaced repetition, review scheduling and retention statistics.
 5. Physical-device benchmarks, demo video and release.

@@ -3,6 +3,8 @@ import java.net.URI
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.devtools.ksp") version "2.3.6"
+    id("androidx.room") version "2.8.5"
 }
 
 fun apiUrl(value: String, httpsOnly: Boolean = false): String {
@@ -53,6 +55,7 @@ android {
         }
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -60,7 +63,10 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions { unitTests.isIncludeAndroidResources = true }
 }
+
+room { schemaDirectory("$projectDir/schemas") }
 
 // Debug builds work immediately; release artifacts require an explicit HTTPS endpoint.
 tasks.matching { it.name == "preReleaseBuild" }.configureEach {
@@ -73,6 +79,12 @@ tasks.matching { it.name == "preReleaseBuild" }.configureEach {
 }
 
 dependencies {
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation("androidx.test:core:1.7.0")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
