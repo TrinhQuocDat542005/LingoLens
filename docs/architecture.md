@@ -65,4 +65,4 @@ Review statistics report actual answer activity and self-reported recall; they d
 
 ## Next milestone
 
-Physical-device failure testing, model benchmarks, demo video and release.
+The revised product plan is documented in the [LingoLens v2 specification](product/lingolens-spec-v2.md). Weeks 5–9 build a vertical learning slice (three lessons, grading, XP and offline sync), then expand reviewed content. This is a target specification, not implemented functionality. Account deletion and privacy preparation are required before release. No implementation begins until the project owner explicitly requests it.

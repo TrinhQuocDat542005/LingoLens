@@ -237,4 +237,6 @@ The bundled EfficientDet-Lite0 INT8 model is pretrained for COCO and used throug
 2. Persistent words per account, vocabulary API/cache, local learning statistics and real Text-to-Speech — [week 2 report](docs/portfolio/week2.md).
 3. Offline write queue, retry, idempotent sync and cloud library restoration — [week 3 report](docs/portfolio/week3.md).
 4. Offline spaced review, durable sessions, shared scheduling and review statistics — [week 4 report](docs/portfolio/week4.md).
-5. Physical-device benchmarks, demo video and release.
+5. Planned: a vertical learning slice, curriculum content, lesson grading/XP and offline completion — [approved v2 specification and weeks 5–9 plan](docs/product/lingolens-spec-v2.md). Implementation awaits the project owner's explicit request.
+
+The v2 specification includes the required account-deletion and privacy preparation before release. It describes planned behavior; the implemented features listed above remain the current application.
