@@ -555,6 +555,8 @@ Chi tiết cột provenance/entrypoint runner được thực hiện trong bư�
 
 Mỗi bước: test trước hành vi quan trọng → triển khai → chạy toàn bộ tests hiện có (Android unit/Robolectric, backend H2 và postgresTest) → báo kết quả → **dừng chờ “tiếp tục”**, không tự sang bước sau. Admin chưa có test suite trong package.json; build TypeScript/Vite là build, không gọi là test. Lint/APK/bootJar kiểm tra ở baseline và checkpoint tích hợp. Không đụng camera, review scheduler, analytics; không thêm thư viện/dịch vụ. Không sửa V1–V8, destructive migration hoặc dữ liệu database thực để lấy baseline.
 
+**[BỔ SUNG — checkpoint bước 1]** Thực hiện trên nhánh riêng, không push/gộp main trước duyệt. Test preflight trước → viết SQL chỉ đọc và chạy fixture → báo cáo, **chờ xác nhận kết quả preflight trước khi viết V9/adapter**. Sau xác nhận mới test trước backfill/invalid migration/DTO/mirror rollback/register/admin/A1 validation và triển khai phần còn lại. Nâng cấp V8 → V9 phải kiểm chứng dữ liệu mẫu trên PostgreSQL thật. Lưu 38 cảnh báo lint bước 0 làm inventory; từ đây không có cảnh báo mới, kể cả tổng cảnh báo không tăng. Sau hoàn tất bước 1 báo cáo và dừng lần nữa.
+
 Sau bước 6 vẫn dừng để chủ dự án duyệt tuần 5; tuần 6 chưa được cấp quyền tự thực hiện.
 
 Tham chiếu kỹ thuật/phát hành để kiểm tra lại trước release: [partial unique indexes PostgreSQL](https://www.postgresql.org/docs/current/indexes-partial.html), [Android TTS Voice](https://developer.android.com/reference/android/speech/tts/Voice), [Google Play Data Safety](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en), [account deletion](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en). Các liên kết không là xác nhận app đã tuân thủ.
