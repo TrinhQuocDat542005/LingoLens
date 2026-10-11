@@ -20,7 +20,8 @@ class AdminService(
     private val vocabularies: VocabularyRepository,
     private val histories: RecognitionHistoryRepository,
     private val reports: RecognitionReportRepository,
-    private val audits: AdminAuditLogRepository
+    private val audits: AdminAuditLogRepository,
+    private val profiles: com.quocdat.lingolens.settings.ProfileAdapter
 ) {
     private val allowedRoles = setOf("ROLE_USER", "ROLE_ADMIN")
 
@@ -125,7 +126,10 @@ class AdminService(
     private fun requireUser(id: Long) = users.findById(id).orElseThrow { UserNotFoundException("Không tìm thấy người dùng") }
     private fun actor(email: String) = users.findByEmail(email).orElse(null)
     private fun audit(email: String, action: String, type: String, id: String?, details: String?) = audits.save(AdminAuditLog(adminUser = actor(email), adminEmail = email, action = action, targetType = type, targetId = id, details = details))
-    private fun toUser(u: User) = AdminUserResponse(u.id!!, u.getEmail(), u.getName(), u.targetLevel, u.dailyGoal, u.streakDays, u.enabled, u.roles.map { it.name }.sorted(), u.createdAt, u.updatedAt)
+    private fun toUser(u: User): AdminUserResponse {
+        val profile = profiles.read(u)
+        return AdminUserResponse(profile.id, profile.email, profile.name, profile.targetLevel, profile.dailyGoal, profile.streakDays, u.enabled, profile.roles, u.createdAt, u.updatedAt)
+    }
     private fun toVocabulary(v: Vocabulary) = VocabularyResponse(v.id!!, v.word, v.translation, v.phonetic, v.partOfSpeech, v.definition, v.exampleSentence, v.exampleSentenceB2, v.synonyms, v.level, v.published, v.createdAt, v.updatedAt)
     private fun toReport(r: RecognitionReport) = RecognitionReportResponse(r.id!!, r.user.id!!, r.user.getEmail(), r.expectedLabel, r.actualLabel, r.confidence, r.note, r.resolved, r.resolvedAt, r.resolvedBy?.getEmail(), r.createdAt)
     private fun toAudit(a: AdminAuditLog) = AuditLogResponse(a.id!!, a.adminEmail, a.action, a.targetType, a.targetId, a.details, a.createdAt)

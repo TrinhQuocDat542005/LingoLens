@@ -36,6 +36,113 @@ class PostgresIntegrationTests {
     @Autowired lateinit var mockMvc: MockMvc
     @Autowired lateinit var mapper: ObjectMapper
     @Autowired lateinit var sync: com.quocdat.lingolens.sync.SyncService
+    @Autowired lateinit var profiles: com.quocdat.lingolens.settings.ProfileAdapter
+    @Autowired lateinit var entities: jakarta.persistence.EntityManager
+
+    @Test @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    fun `concurrent profile PUTs leave a complete last writer mirror`() {
+        val email = "profile-race-${UUID.randomUUID()}@lingolens.dev"
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(RegisterRequest(email, "Secure123!", "Original")))).andExpect(status().isCreated)
+        val id = jdbc.queryForObject("SELECT id FROM users WHERE email=?", Long::class.java, email)!!
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        val start = java.util.concurrent.CountDownLatch(1)
+        val requests = listOf(com.quocdat.lingolens.user.UpdateProfileRequest("One", "B1", 8),
+            com.quocdat.lingolens.user.UpdateProfileRequest("Two", "B2", 17))
+        try {
+            val jobs = requests.map { body -> executor.submit { start.await(); profiles.update(id, body) } }
+            start.countDown(); jobs.forEach { it.get(15, java.util.concurrent.TimeUnit.SECONDS) }
+            val result = jdbc.queryForObject("SELECT u.name || ':' || u.target_level || ':' || u.daily_goal || ':' || s.target_level || ':' || s.daily_new_word_goal FROM users u JOIN learner_settings s ON s.user_id=u.id WHERE u.id=?", String::class.java, id)
+            assertTrue(result in setOf("One:B1:8:B1:8", "Two:B2:17:B2:17"))
+        } finally { executor.shutdownNow() }
+    }
+
+    @Test @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    fun `login refresh FK is not blocked by an uncommitted profile update`() {
+        val email = "login-profile-${UUID.randomUUID()}@lingolens.dev"
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(RegisterRequest(email, "Secure123!", "Original")))).andExpect(status().isCreated)
+        val id = jdbc.queryForObject("SELECT id FROM users WHERE email=?", Long::class.java, email)!!
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        jdbc.dataSource!!.connection.use { blocker ->
+            blocker.autoCommit = false
+            blocker.prepareStatement("UPDATE learner_settings SET daily_review_goal=daily_review_goal WHERE user_id=?").use {
+                it.setLong(1, id); it.executeUpdate()
+            }
+            try {
+                val update = executor.submit { profiles.update(id, com.quocdat.lingolens.user.UpdateProfileRequest("Changed", "B2", 17)) }
+                val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(10)
+                var waiting = false
+                while (!waiting && System.nanoTime() < deadline) {
+                    waiting = jdbc.queryForObject("SELECT count(*) FROM pg_stat_activity WHERE wait_event_type='Lock' AND query LIKE 'UPDATE learner_settings SET%'", Int::class.java)!! > 0
+                    if (!waiting) Thread.sleep(20)
+                }
+                assertTrue(waiting, "Profile must be paused after updating users, before settings commit")
+                val login = executor.submit {
+                    mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(LoginRequest(email, "Secure123!")))).andExpect(status().isOk)
+                }
+                login.get(5, java.util.concurrent.TimeUnit.SECONDS)
+                assertTrue(!update.isDone, "Profile must still be uncommitted during login")
+                blocker.rollback()
+                update.get(15, java.util.concurrent.TimeUnit.SECONDS)
+                assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM refresh_tokens WHERE user_id=?", Int::class.java, id)!!)
+            } finally { blocker.rollback(); executor.shutdownNow() }
+        }
+    }
+
+    @Test fun `register legacy profile PUT and admin all use settings adapter`() {
+        val email = "settings-${UUID.randomUUID()}@lingolens.dev"
+        val registered = mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(RegisterRequest(email, "Secure123!", "Settings User"))))
+            .andExpect(status().isCreated).andExpect(jsonPath("$.data.targetLevel").value("A1"))
+            .andExpect(jsonPath("$.data.dailyGoal").value(5)).andReturn().response.contentAsString
+        val profile = mapper.readTree(registered).path("data")
+        assertEquals(setOf("id", "email", "name", "targetLevel", "streakDays", "dailyGoal", "roles"), profile.fieldNames().asSequence().toSet())
+        listOf("id", "streakDays", "dailyGoal").forEach { assertTrue(profile.path(it).isIntegralNumber) }
+        listOf("email", "name", "targetLevel").forEach { assertTrue(profile.path(it).isTextual) }
+        assertTrue(profile.path("roles").isArray)
+        val id = profile.path("id").asLong()
+        assertEquals("UNSET:10", jdbc.queryForObject("SELECT learning_goal || ':' || daily_review_goal FROM learner_settings WHERE user_id=?", String::class.java, id))
+        jdbc.update("INSERT INTO user_roles SELECT ?,id FROM roles WHERE name='ROLE_ADMIN'", id)
+        jdbc.update("UPDATE learner_settings SET target_level='B2',daily_new_word_goal=9 WHERE user_id=?", id)
+        entities.clear()
+        val token = mapper.readTree(mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(LoginRequest(email, "Secure123!")))).andExpect(status().isOk)
+            .andReturn().response.contentAsString).path("data").path("accessToken").asText()
+        mockMvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.data.targetLevel").value("B2")).andExpect(jsonPath("$.data.dailyGoal").value(9))
+        mockMvc.perform(get("/api/v1/admin/users").param("search", email).header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.data.content[0].targetLevel").value("B2"))
+        mockMvc.perform(put("/api/v1/users/me").header("Authorization", "Bearer $token").contentType(MediaType.APPLICATION_JSON)
+            .content("""{"name":"Updated","targetLevel":"A1","dailyGoal":7}"""))
+            .andExpect(status().isOk).andExpect(jsonPath("$.data.targetLevel").value("A1"))
+        assertEquals("A1:7:A1:7", jdbc.queryForObject("SELECT u.target_level || ':' || u.daily_goal || ':' || s.target_level || ':' || s.daily_new_word_goal FROM users u JOIN learner_settings s ON s.user_id=u.id WHERE u.id=?", String::class.java, id))
+        mockMvc.perform(put("/api/v1/users/me").header("Authorization", "Bearer $token").contentType(MediaType.APPLICATION_JSON)
+            .content("""{"name":"Invalid","targetLevel":"C9","dailyGoal":7}"""))
+            .andExpect(status().isBadRequest)
+        mockMvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.data.name").value("Updated"))
+    }
+
+    @Test @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    fun `profile update rolls back both mirrors when settings write fails`() {
+        val email = "rollback-${UUID.randomUUID()}@lingolens.dev"
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(RegisterRequest(email, "Secure123!", "Original")))).andExpect(status().isCreated)
+        val id = jdbc.queryForObject("SELECT id FROM users WHERE email=?", Long::class.java, email)!!
+        jdbc.execute("""CREATE FUNCTION fail_settings_write() RETURNS trigger LANGUAGE plpgsql AS ${'$'}${'$'} BEGIN RAISE EXCEPTION 'Injected settings write failure'; END; ${'$'}${'$'}""")
+        jdbc.execute("CREATE TRIGGER reject_settings_write AFTER UPDATE ON learner_settings FOR EACH ROW EXECUTE FUNCTION fail_settings_write()")
+        try {
+            org.junit.jupiter.api.Assertions.assertThrows(Exception::class.java) {
+                profiles.update(id, com.quocdat.lingolens.user.UpdateProfileRequest("Changed", "B2", 17))
+            }
+            assertEquals("Original:A1:5:A1:5", jdbc.queryForObject("SELECT u.name || ':' || u.target_level || ':' || u.daily_goal || ':' || s.target_level || ':' || s.daily_new_word_goal FROM users u JOIN learner_settings s ON s.user_id=u.id WHERE u.id=?", String::class.java, id))
+        } finally {
+            jdbc.execute("DROP TRIGGER reject_settings_write ON learner_settings")
+            jdbc.execute("DROP FUNCTION fail_settings_write()")
+        }
+    }
 
     @Test @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     fun `concurrent review retries advance PostgreSQL schedule once`() {
@@ -62,7 +169,7 @@ class PostgresIntegrationTests {
     }
 
     @Test fun `all migrations apply and seed vocabulary on PostgreSQL`() {
-        assertEquals(8, jdbc.queryForObject(
+        assertEquals(9, jdbc.queryForObject(
             "SELECT COUNT(*) FROM flyway_schema_history WHERE success = TRUE AND type = 'SQL'", Int::class.java)!!)
         assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM roles", Int::class.java)!!)
         assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM vocabularies WHERE is_published = TRUE", Int::class.java)!! > 0)

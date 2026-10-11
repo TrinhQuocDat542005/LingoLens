@@ -1,6 +1,6 @@
 # LingoLens — Đặc tả sản phẩm và kiến trúc v2
 
-**Trạng thái:** chủ dự án đã cho phép bắt đầu **chỉ tuần 5**. Hiện chỉ thực hiện bước 0 sau khi cập nhật hợp đồng; kết thúc bước 0 và mỗi bước tiếp theo phải báo cáo rồi chờ chỉ thị **“tiếp tục”**. Tuần 6 trở đi chưa được phép triển khai.
+**Trạng thái:** chủ dự án đã duyệt preflight và cho phép thực hiện liên tục **bước 1–5 của tuần 5** trên một nhánh riêng. Mỗi bước một commit và chạy đủ regression/build/lint; test thất bại thì dừng báo cáo. Sau bước 5 dừng để chủ dự án test app; bước 6 và tuần 6 trở đi chưa được phép triển khai.
 
 **Căn cứ:** đặc tả ban đầu trong cuộc trò chuyện, đối chiếu migration V1–V8, Room v3 và quyết định **1A, 2A, 3A, 4A, 5A, 6A**, cùng các bổ sung của chủ dự án. Tài liệu này là đặc tả đích, không phải báo cáo tính năng đã triển khai.
 
@@ -494,6 +494,8 @@ Không sửa dữ liệu trong preflight. Chạy lại ngay trước deploy và 
 
 GET/PUT profile giữ field và kiểu DTO cũ, đọc/ghi từ learner_settings qua adapter; cập nhật tên ở users. Validation mức hỗ trợ A1/B1/B2. Đăng ký mới, cached profile Android và admin profile cũng theo cùng nguồn chính. Mirror target_level/daily_goal legacy cùng transaction trong thời gian tương thích; streakDays trả như hiện tại. Không xóa cột cũ tuần 5.
 
+**[CHI TIẾT TRIỂN KHAI BƯỚC 1]** Profile PUT dùng last-write-wins: hai UPDATE chỉ các cột profile theo thứ tự users → learner_settings, trong cùng transaction, không SELECT khóa bi quan tường minh hoặc đổi khóa users. PostgreSQL kiểm chứng concurrent PUT/mirror rollback và đăng nhập chèn refresh token trong lúc profile chưa commit; H2 kiểm tra hợp đồng API. Khóa theo account để cấp XP ở bước 4 là nghiệp vụ riêng, không suy ra cần khóa bi quan cho profile.
+
 ### 13.2. JSON seed và schema kiểm tra
 
 Gói JSON bất biến, ID UUID cố định; schemaVersion = 1, packId UUID, contentStatus DEMO/REVIEWED, pronunciationLocale en-US. Có course, topic, unit và đúng ba lessons; vocabulary/snapshot/câu hỏi nằm trong gói với tham chiếu rõ ràng.
@@ -558,5 +560,7 @@ Mỗi bước: test trước hành vi quan trọng → triển khai → chạy t
 **[BỔ SUNG — checkpoint bước 1]** Thực hiện trên nhánh riêng, không push/gộp main trước duyệt. Test preflight trước → viết SQL chỉ đọc và chạy fixture → báo cáo, **chờ xác nhận kết quả preflight trước khi viết V9/adapter**. Sau xác nhận mới test trước backfill/invalid migration/DTO/mirror rollback/register/admin/A1 validation và triển khai phần còn lại. Nâng cấp V8 → V9 phải kiểm chứng dữ liệu mẫu trên PostgreSQL thật. Lưu 38 cảnh báo lint bước 0 làm inventory; từ đây không có cảnh báo mới, kể cả tổng cảnh báo không tăng. Sau hoàn tất bước 1 báo cáo và dừng lần nữa.
 
 Sau bước 6 vẫn dừng để chủ dự án duyệt tuần 5; tuần 6 chưa được cấp quyền tự thực hiện.
+
+**[CẬP NHẬT QUYỀN THỰC HIỆN]** Chủ dự án xác nhận preflight, chỉ có dữ liệu dev thử nghiệm và cho phép bỏ chạy trên database vận hành ở lần này (phải chạy trước triển khai thật). Chỉ thị mới cho phép liên tục bước 1–5, thay các checkpoint chờ sau mỗi bước ở trên: mỗi bước vẫn test trước, đủ regression/Android/backend/PostgreSQL/admin build/lint và commit riêng; dừng nếu test thất bại, phát hiện dữ liệu không hợp lệ, mâu thuẫn với repo hoặc cần đổi hợp đồng. Không gộp main. Sau bước 5 dừng chờ test tay, chưa làm bước 6.
 
 Tham chiếu kỹ thuật/phát hành để kiểm tra lại trước release: [partial unique indexes PostgreSQL](https://www.postgresql.org/docs/current/indexes-partial.html), [Android TTS Voice](https://developer.android.com/reference/android/speech/tts/Voice), [Google Play Data Safety](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en), [account deletion](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en). Các liên kết không là xác nhận app đã tuân thủ.
