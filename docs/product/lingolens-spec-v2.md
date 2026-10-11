@@ -614,6 +614,19 @@ Migration test mở DB v3 trên đĩa có đủ hai account, words/cache/learnin
 - Test PostgreSQL bắt buộc: bài 2 đến trước bài 1 vẫn có attempt/answers, không progress/XP; sau bài 1, retry UUID bài 2 xác nhận một lần; concurrent pending retries và hai UUID vẫn không nhân đôi thưởng; invalid payload BLOCKED không ghi dở. Bài trượt đã đủ prerequisite được CONFIRMED nhưng không mở khóa/thưởng.
 - Revision cũ archived giữ để nộp, không deadline MVP. XP/progress theo lesson ID ổn định; revision mới không thưởng lại. Nếu cần trạng thái confirmation persistence, chỉ thêm migration mới sau V12; không sửa V1–V12.
 
+**[BỔ SUNG — tuần 6 bước 3] V13: attempt confirmation bền vững.** Thêm duy nhất `lesson_attempts.confirmation_status VARCHAR(30) NOT NULL DEFAULT 'CONFIRMED'`, CHECK chỉ cho CONFIRMED/WAITING_PREREQUISITE. Attempt tuần 5 được đọc là CONFIRMED; không đổi điểm/answers/hash/timestamp/progress/XP/enrollment. Schema cũ không có dấu xác nhận riêng, không được suy đoán trạng thái qua việc có/không có XP hoặc progress (PRACTICE, bài trượt và nhiều attempts có thể cùng không có XP). V13 chỉ cộng thêm cột/ràng buộc; không xóa/đổi kiểu cột cũ, không UPDATE backfill thủ công. PostgreSQL 15 dùng fast constant default, tránh rewrite heap; DDL vẫn cần khóa và CHECK có thể quét dữ liệu. Test nâng cấp V12 có dữ liệu phải so toàn bộ cột cũ từng dòng, checksum history, partial unique indexes và filenode heap trước/sau.
+
+| Migration backend | Mục đích và phạm vi |
+| --- | --- |
+| V1–V8 | Nền tảng tuần 1–4; bất biến |
+| V9 | learner_settings/backfill/profile compatibility; bất biến |
+| V10 | Curriculum/revisions/snapshots/questions và partial unique PUBLISHED; bất biến |
+| V11 | Enrollment/attempt/answers/progress/XP và partial unique ACTIVE; bất biến |
+| V12 | Provenance/import receipt, không chứa DEMO; bất biến |
+| **V13 mới** | Chỉ thêm confirmation_status/default/check vào lesson_attempts để retry pending qua restart/transaction; không thay nội dung/điểm/XP cũ |
+
+Checksum SHA-256 LF của nguồn V1–V12 (SQL, Kotlin migration và SQL resources) được đối chiếu với inventory cố định; V13 ghi checksum riêng trong `docs/portfolio/week6-migration-checksums.json`. Flyway validate/history checksum vẫn phải đạt. Kiểm tra này bảo vệ tính bất biến của nguồn/history, không thay thế test hành vi hoặc kiểm chứng dữ liệu mục tiêu trước triển khai.
+
 ### 14.5. UUID cũ, lỗi admin và điểm dừng
 
 - UUID mất trước tuần 6 không được suy đoán gộp/xóa attempt. Không thêm API đối soát, **không chuyển payload SavedStateHandle sang Room khi nâng cấp**. Attempt/session tuần 6 mới dùng Room; unique XP bảo vệ lượt học mới cùng lesson.

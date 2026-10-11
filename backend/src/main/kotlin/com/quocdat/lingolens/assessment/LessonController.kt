@@ -15,6 +15,9 @@ class LessonController(private val lessons: LessonService) {
         lessons.enroll(user.id!!,id); return ApiResponse.success("Course enrolled")
     }
     @GetMapping("/curriculum/lessons/{id}") fun lesson(@AuthenticationPrincipal user: User,@PathVariable id: UUID) = ApiResponse.success("Lesson loaded",lessons.lesson(user.id!!,id))
-    @PostMapping("/lesson-attempts") fun submit(@AuthenticationPrincipal user: User,@Valid @RequestBody request: SubmitLessonRequest) = ApiResponse.success("Attempt confirmed",lessons.submit(user.id!!,request))
+    @PostMapping("/lesson-attempts") fun submit(@AuthenticationPrincipal user: User,@Valid @RequestBody request: SubmitLessonRequest): org.springframework.http.ResponseEntity<AttemptSubmissionResponse> {
+        val result=lessons.submit(user.id!!,request)
+        return org.springframework.http.ResponseEntity.status(if(result.retryable) 202 else 200).body(AttemptSubmissionResponse(result))
+    }
     @GetMapping("/lesson-attempts/{id}") fun result(@AuthenticationPrincipal user: User,@PathVariable id: UUID) = ApiResponse.success("Attempt loaded",lessons.result(user.id!!,id))
 }

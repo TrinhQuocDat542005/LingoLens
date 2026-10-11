@@ -1,0 +1,2 @@
+ALTER TABLE lesson_attempts ADD COLUMN confirmation_status VARCHAR(30) NOT NULL DEFAULT 'CONFIRMED'
+ CHECK (confirmation_status IN ('CONFIRMED','WAITING_PREREQUISITE'));

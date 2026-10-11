@@ -21,7 +21,8 @@ class AdminService(
     private val histories: RecognitionHistoryRepository,
     private val reports: RecognitionReportRepository,
     private val audits: AdminAuditLogRepository,
-    private val profiles: com.quocdat.lingolens.settings.ProfileAdapter
+    private val profiles: com.quocdat.lingolens.settings.ProfileAdapter,
+    private val jdbc: org.springframework.jdbc.core.JdbcTemplate
 ) {
     private val allowedRoles = setOf("ROLE_USER", "ROLE_ADMIN")
 
@@ -100,7 +101,12 @@ class AdminService(
     @Transactional
     fun deleteVocabulary(id: Long, actorEmail: String) {
         val item = vocabularies.findById(id).orElseThrow { IllegalArgumentException("Không tìm thấy từ vựng") }
-        vocabularies.delete(item)
+        fun referenced():Nothing = throw com.quocdat.lingolens.assessment.LessonRequestException(org.springframework.http.HttpStatus.CONFLICT,"VOCABULARY_IN_USE","Từ vựng đang được bài học tham chiếu; không thể xóa.")
+        if(jdbc.queryForObject("SELECT count(*) FROM lesson_vocabularies WHERE vocabulary_id=?",Int::class.java,id)!!>0) referenced()
+        try{vocabularies.delete(item);vocabularies.flush()}catch(error:org.springframework.dao.DataIntegrityViolationException){
+            if(generateSequence<Throwable>(error){it.cause}.filterIsInstance<java.sql.SQLException>().any{it.sqlState=="23503"}) referenced()
+            throw error
+        }
         audit(actorEmail, "DELETE", "VOCABULARY", id.toString(), item.word)
     }
 

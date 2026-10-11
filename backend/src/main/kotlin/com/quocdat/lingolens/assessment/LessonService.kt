@@ -48,47 +48,58 @@ class LessonService(private val jdbc: JdbcTemplate, private val mapper: ObjectMa
     }
     @Transactional
     fun submit(account: Long, request: SubmitLessonRequest): AttemptResult {
-        checkRequest(request.mode in setOf("LESSON","PRACTICE") && !request.submittedOffline,"Online LESSON/PRACTICE only in week 5")
+        checkRequest(request.mode in setOf("LESSON","PRACTICE"),"Invalid lesson mode")
         checkRequest(request.clientCompletedAt>0 && request.clientCompletedAt<=System.currentTimeMillis()+86_400_000,"Invalid client timestamp")
         lockAccount(account)
         // Cross-account UUID races are also serialized; no result ownership is leaked.
         jdbc.execute("SELECT pg_advisory_xact_lock(${java.nio.ByteBuffer.wrap(MessageDigest.getInstance("SHA-256").digest(request.id.toString().toByteArray())).long})")
         val hash=requestHash(request)
-        val previous=jdbc.queryForList("SELECT user_id,request_hash FROM lesson_attempts WHERE id=?",request.id).firstOrNull()
+        val previous=jdbc.queryForList("SELECT user_id,request_hash,confirmation_status FROM lesson_attempts WHERE id=?",request.id).firstOrNull()
         if (previous!=null) {
             if ((previous["user_id"] as Number).toLong()!=account) notFound()
             if (previous["request_hash"]!=hash) throw LessonRequestException(HttpStatus.CONFLICT,"ATTEMPT_PAYLOAD_CONFLICT","Attempt UUID already has a different payload")
+            if(previous["confirmation_status"]=="WAITING_PREREQUISITE") {
+                val row=revisionRow(request.lessonRevisionId)
+                requireEnrollment(account,row)
+                if(prerequisitesMet(account,row)) {
+                    val grade=result(account,request.id)
+                    applyProgress(account,row["lesson_id"] as UUID,request.id,grade.scorePercent,grade.passed,Timestamp.from(Instant.now()))
+                    jdbc.update("UPDATE lesson_attempts SET confirmation_status='CONFIRMED' WHERE id=?",request.id)
+                }
+            }
             return result(account,request.id)
         }
-        val row=jdbc.queryForList("SELECT l.id lesson_id,l.position lesson_position,u.position unit_position,u.course_id FROM lesson_revisions r JOIN lessons l ON l.id=r.lesson_id JOIN course_units u ON u.id=l.unit_id WHERE r.id=? AND r.status IN ('PUBLISHED','ARCHIVED')",request.lessonRevisionId).firstOrNull()
-            ?: throw LessonRequestException(HttpStatus.NOT_FOUND,"LESSON_NOT_FOUND","Revision unavailable")
-        if (request.mode=="LESSON") requireAvailable(account,row)
+        val row=revisionRow(request.lessonRevisionId)
+        requireEnrollment(account,row)
+        val confirmed=request.mode=="PRACTICE" || prerequisitesMet(account,row)
         val questions=jdbc.queryForList("SELECT id,weight,answer_key::text FROM questions WHERE lesson_revision_id=? ORDER BY position",request.lessonRevisionId).map {
             val id=it["id"] as UUID
             GradingQuestion(id,(it["weight"] as Number).toInt(),jdbc.queryForList("SELECT option_key FROM question_options WHERE question_id=?",String::class.java,id).toSet(),mapper.readTree(it["answer_key"].toString())["optionKey"].asText())
         }
         checkRequest(questions.size in 8..10,"Invalid lesson question count")
-        val grade=LessonGrader.grade(questions,request.answers); val now=Timestamp.from(Instant.now())
-        jdbc.update("INSERT INTO lesson_attempts VALUES (?,?,?,?,?,?,?,?,?,?)",request.id,account,request.lessonRevisionId,request.mode,grade.scorePercent,grade.passed,false,Timestamp(request.clientCompletedAt),now,hash)
+        val grade=try{LessonGrader.grade(questions,request.answers)}catch(error:IllegalArgumentException){throw LessonRequestException(HttpStatus.BAD_REQUEST,"LESSON_REQUEST_INVALID",error.message ?: "Invalid answers")}
+        val now=Timestamp.from(Instant.now())
+        jdbc.update("INSERT INTO lesson_attempts(id,user_id,lesson_revision_id,mode,score_percent,passed,submitted_offline,client_completed_at,received_at,request_hash,confirmation_status) VALUES (?,?,?,?,?,?,?,?,?,?,?)",request.id,account,request.lessonRevisionId,request.mode,grade.scorePercent,grade.passed,request.submittedOffline,Timestamp(request.clientCompletedAt),now,hash,if(confirmed) "CONFIRMED" else "WAITING_PREREQUISITE")
         grade.marks.forEach { mark -> jdbc.update("INSERT INTO attempt_answers VALUES (?,?,?,CAST(? AS JSONB),?,?)",request.id,mark.questionId,request.lessonRevisionId,mapper.writeValueAsString(mapOf("optionKey" to mark.optionKey)),mark.correct,mark.awardedWeight) }
-        if (request.mode=="LESSON") {
-            val lesson=row["lesson_id"] as UUID
-            val progress=jdbc.queryForList("SELECT best_score_percent,first_passed_at FROM lesson_progress WHERE user_id=? AND lesson_id=?",account,lesson).firstOrNull()
-            val firstPass=grade.passed && progress?.get("first_passed_at")==null
-            if (progress==null) jdbc.update("INSERT INTO lesson_progress VALUES (?,?,?,?,?,?)",account,lesson,grade.scorePercent,if (grade.passed) now else null,request.id,now)
-            else jdbc.update("UPDATE lesson_progress SET best_score_percent=?,first_passed_at=COALESCE(first_passed_at,?),last_attempt_id=?,updated_at=? WHERE user_id=? AND lesson_id=?",
-                maxOf((progress["best_score_percent"] as Number).toInt(),grade.scorePercent),if (grade.passed) now else null,request.id,now,account,lesson)
-            if (firstPass) jdbc.update("INSERT INTO xp_events VALUES (?,?,'LESSON_FIRST_PASS',?,30,1,?)",request.id,account,lesson.toString(),now)
-        }
+        if (request.mode=="LESSON" && confirmed) applyProgress(account,row["lesson_id"] as UUID,request.id,grade.scorePercent,grade.passed,now)
         return result(account,request.id)
+    }
+    private fun applyProgress(account:Long,lesson:UUID,attempt:UUID,score:Int,passed:Boolean,now:Timestamp) {
+            val progress=jdbc.queryForList("SELECT best_score_percent,first_passed_at FROM lesson_progress WHERE user_id=? AND lesson_id=?",account,lesson).firstOrNull()
+            val firstPass=passed && progress?.get("first_passed_at")==null
+            if (progress==null) jdbc.update("INSERT INTO lesson_progress VALUES (?,?,?,?,?,?)",account,lesson,score,if (passed) now else null,attempt,now)
+            else jdbc.update("UPDATE lesson_progress SET best_score_percent=?,first_passed_at=COALESCE(first_passed_at,?),last_attempt_id=?,updated_at=? WHERE user_id=? AND lesson_id=?",
+                maxOf((progress["best_score_percent"] as Number).toInt(),score),if (passed) now else null,attempt,now,account,lesson)
+            if (firstPass) jdbc.update("INSERT INTO xp_events VALUES (?,?,'LESSON_FIRST_PASS',?,30,1,?)",attempt,account,lesson.toString(),now)
     }
     @Transactional(readOnly=true)
     fun result(account: Long, id: UUID): AttemptResult {
-        val row=jdbc.queryForList("SELECT a.id,r.lesson_id,a.mode,a.score_percent,a.passed FROM lesson_attempts a JOIN lesson_revisions r ON r.id=a.lesson_revision_id WHERE a.id=? AND a.user_id=?",id,account).firstOrNull() ?: notFound()
+        val row=jdbc.queryForList("SELECT a.id,r.lesson_id,a.mode,a.score_percent,a.passed,a.confirmation_status FROM lesson_attempts a JOIN lesson_revisions r ON r.id=a.lesson_revision_id WHERE a.id=? AND a.user_id=?",id,account).firstOrNull() ?: notFound()
         val correct=jdbc.queryForObject("SELECT count(*) FROM attempt_answers WHERE attempt_id=? AND is_correct",Int::class.java,id)!!
         val total=jdbc.queryForObject("SELECT count(*) FROM attempt_answers WHERE attempt_id=?",Int::class.java,id)!!
         val xp=jdbc.queryForObject("SELECT COALESCE(sum(amount),0) FROM xp_events WHERE id=? AND user_id=?",Int::class.java,id,account)!!
-        return AttemptResult(id,row["lesson_id"] as UUID,row["mode"].toString(),correct,total,(row["score_percent"] as Number).toInt(),row["passed"] as Boolean,xp)
+        val status=row["confirmation_status"].toString();val pending=status=="WAITING_PREREQUISITE"
+        return AttemptResult(id,row["lesson_id"] as UUID,row["mode"].toString(),correct,total,(row["score_percent"] as Number).toInt(),row["passed"] as Boolean,xp,status,pending,if(pending) "LESSON_PREREQUISITE_PENDING" else null)
     }
     private fun requestHash(request: SubmitLessonRequest): String {
         val canonical=linkedMapOf("revision" to request.lessonRevisionId.toString(),"mode" to request.mode,"completed" to request.clientCompletedAt,"offline" to request.submittedOffline,
@@ -97,10 +108,18 @@ class LessonService(private val jdbc: JdbcTemplate, private val mapper: ObjectMa
     }
     private fun lockAccount(account: Long) { jdbc.queryForObject("SELECT id FROM users WHERE id=? FOR NO KEY UPDATE",Long::class.java,account) }
     private fun requireAvailable(account: Long, row: Map<String,Any?>) {
-        checkRequest(jdbc.queryForObject("SELECT count(*) FROM enrollments WHERE user_id=? AND course_id=? AND status='ACTIVE'",Int::class.java,account,row["course_id"])!! == 1,"Enroll before starting lesson")
-        val blocked=jdbc.queryForObject("SELECT count(*) FROM lessons l JOIN course_units u ON u.id=l.unit_id WHERE u.course_id=? AND (u.position<? OR (u.position=? AND l.position<?)) AND NOT EXISTS(SELECT 1 FROM lesson_progress p WHERE p.user_id=? AND p.lesson_id=l.id AND p.first_passed_at IS NOT NULL)",Int::class.java,row["course_id"],row["unit_position"],row["unit_position"],row["lesson_position"],account)!!
-        checkRequest(blocked==0,"Complete previous lesson first")
+        requireEnrollment(account,row)
+        checkRequest(prerequisitesMet(account,row),"Complete previous lesson first")
     }
+    private fun requireEnrollment(account:Long,row:Map<String,Any?>) {
+        checkRequest(jdbc.queryForObject("SELECT count(*) FROM enrollments WHERE user_id=? AND course_id=? AND status='ACTIVE'",Int::class.java,account,row["course_id"])!! == 1,"Enroll before starting lesson")
+    }
+    private fun prerequisitesMet(account:Long,row:Map<String,Any?>):Boolean {
+        val blocked=jdbc.queryForObject("SELECT count(*) FROM lessons l JOIN course_units u ON u.id=l.unit_id WHERE u.course_id=? AND (u.position<? OR (u.position=? AND l.position<?)) AND NOT EXISTS(SELECT 1 FROM lesson_progress p WHERE p.user_id=? AND p.lesson_id=l.id AND p.first_passed_at IS NOT NULL)",Int::class.java,row["course_id"],row["unit_position"],row["unit_position"],row["lesson_position"],account)!!
+        return blocked==0
+    }
+    private fun revisionRow(revision:UUID):Map<String,Any?> = jdbc.queryForList("SELECT l.id lesson_id,l.position lesson_position,u.position unit_position,u.course_id FROM lesson_revisions r JOIN lessons l ON l.id=r.lesson_id JOIN course_units u ON u.id=l.unit_id JOIN courses c ON c.id=u.course_id WHERE r.id=? AND r.status IN ('PUBLISHED','ARCHIVED') AND c.status IN ('PUBLISHED','ARCHIVED')",revision).firstOrNull()
+        ?: throw LessonRequestException(HttpStatus.NOT_FOUND,"LESSON_REVISION_UNAVAILABLE","Revision unavailable")
     private fun checkRequest(valid: Boolean, message: String) { if (!valid) throw LessonRequestException(HttpStatus.BAD_REQUEST,"LESSON_REQUEST_INVALID",message) }
     private fun notFound(): Nothing = throw LessonRequestException(HttpStatus.NOT_FOUND,"ATTEMPT_NOT_FOUND","Attempt not found")
 }
