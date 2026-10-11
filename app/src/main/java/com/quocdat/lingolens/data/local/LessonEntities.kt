@@ -38,6 +38,8 @@ interface LessonDao {
     @Upsert suspend fun saveSession(session: LessonSession)
     @Query("SELECT * FROM LessonSession WHERE accountId=:accountId AND id=:id")
     suspend fun session(accountId: Long, id: String): LessonSession?
+    @Query("SELECT * FROM LessonSession WHERE accountId=:accountId ORDER BY updatedAt DESC, id")
+    suspend fun sessions(accountId: Long): List<LessonSession>
     @Insert suspend fun enqueue(operation: LessonAttemptOutbox)
     @Query("SELECT * FROM LessonAttemptOutbox WHERE accountId=:accountId AND state!='CONFIRMED' ORDER BY queuedAt, attemptId")
     suspend fun pending(accountId: Long): List<LessonAttemptOutbox>

@@ -82,6 +82,8 @@ class AppContainer(context: Context) {
     val contentPackRepository = com.quocdat.lingolens.lesson.ContentPackRepository(learningDatabase,
         com.quocdat.lingolens.lesson.RemotePackGateway(authenticatedRetrofit.create(com.quocdat.lingolens.lesson.PackApi::class.java)),
         isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id })
+    val lessonSessionRepository = com.quocdat.lingolens.lesson.LessonSessionRepository(learningDatabase,contentPackRepository,
+        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id },scheduleSync = syncScheduler::schedule)
     val syncEngine = com.quocdat.lingolens.sync.SyncEngine(learningDatabase,
         authenticatedRetrofit.create(com.quocdat.lingolens.sync.SyncApi::class.java),
         isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id })
