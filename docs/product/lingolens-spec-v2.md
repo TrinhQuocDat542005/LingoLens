@@ -1,6 +1,6 @@
 # LingoLens — Đặc tả sản phẩm và kiến trúc v2
 
-**Trạng thái:** đặc tả đã được chủ dự án duyệt để chuẩn bị triển khai; chưa cho phép viết code. Chỉ bắt đầu triển khai sau chỉ thị **“bắt đầu code”**.
+**Trạng thái:** chủ dự án đã cho phép bắt đầu **chỉ tuần 5**. Hiện chỉ thực hiện bước 0 sau khi cập nhật hợp đồng; kết thúc bước 0 và mỗi bước tiếp theo phải báo cáo rồi chờ chỉ thị **“tiếp tục”**. Tuần 6 trở đi chưa được phép triển khai.
 
 **Căn cứ:** đặc tả ban đầu trong cuộc trò chuyện, đối chiếu migration V1–V8, Room v3 và quyết định **1A, 2A, 3A, 4A, 5A, 6A**, cùng các bổ sung của chủ dự án. Tài liệu này là đặc tả đích, không phải báo cáo tính năng đã triển khai.
 
@@ -88,7 +88,7 @@ daily_goal và daily_review_goal không trùng nghĩa; target_level và learning
 | --- | --- | --- |
 | user_id | BIGINT | PK, FK → users.id |
 | target_level | VARCHAR(10) | NN; mức nội dung, hỗ trợ A1 và các giá trị cũ B1/B2 |
-| learning_goal | VARCHAR(30) | NN; mục đích học được onboarding lựa chọn |
+| learning_goal | VARCHAR(30) | NN; mặc định UNSET đến khi người dùng chọn |
 | daily_new_word_goal | INT | NN, CHECK 1–50; kế thừa users.daily_goal |
 | daily_review_goal | SMALLINT | NN, CHECK 5–100 |
 | timezone | VARCHAR(64) | NULL trước onboarding; sau đó IANA timezone được xác thực |
@@ -99,7 +99,7 @@ Kế hoạch expand → chuyển ứng dụng → contract:
 
 1. Tạo bảng mới ở migration tương lai; báo cáo dữ liệu null/không hợp lệ trước backfill.
 2. Sao chép target_level/daily_goal nguyên giá trị hợp lệ. Không đổi B1/B2 thành A1 để phù hợp nội dung mới.
-3. Với mục tiêu ôn mới, đề xuất mặc định 10; learning_goal/timezone chưa biết được xác nhận qua onboarding. Giá trị mặc định cuối cùng phải được ghi trong hợp đồng trước code.
+3. Hợp đồng tuần 5 đã duyệt: tài khoản mới A1, daily_new_word_goal = 5, daily_review_goal = 10, learning_goal = UNSET, timezone/onboarding_completed_at = NULL. Người dùng cũ giữ nguyên target_level/daily_goal hợp lệ; các trường mới dùng 10/UNSET/NULL tương ứng, không tự đổi B1/B2 thành A1.
 4. Backend dùng learner_settings làm nguồn chính, tiếp tục trả DTO profile cũ qua adapter. Những client cũ cập nhật profile phải đi qua cùng nguồn ghi.
 5. Không để users và learner_settings là hai nguồn độc lập; nếu cần mirror legacy thì cập nhật cùng transaction, có thời hạn loại bỏ.
 6. Chuyển Android/cache profile và admin DTO, kiểm tra phiên cũ và nâng cấp.
@@ -211,7 +211,7 @@ Không có course version: enrollment không tái dựng chính xác cấu trúc
 | user_id | BIGINT | NN, FK → users.id |
 | lesson_revision_id | UUID | NN, FK → lesson_revisions.id; UQ(id, lesson_revision_id) |
 | mode | VARCHAR(20) | NN; LESSON/PRACTICE |
-| score_percent | SMALLINT | NN, CHECK 0–100; chỉ để hiển thị |
+| score_percent | SMALLINT | NN, CHECK 0–100; phần trăm trọng số làm tròn xuống, chỉ để hiển thị |
 | passed | BOOLEAN | NN; backend tính từ tỷ lệ chưa làm tròn |
 | submitted_offline | BOOLEAN | NN |
 | client_completed_at | TIMESTAMPTZ | NN; thiết bị khai báo, không là trusted clock |
@@ -315,7 +315,7 @@ Năm tab đích: Hôm nay, Học, Ôn tập, Khám phá, Cá nhân. Đây là th
 
 **[THAY ĐỔI — 4A]** Mở bài tiếp theo khi đạt ≥70% tỷ lệ đúng có trọng số, trước làm tròn. Với trọng số bằng nhau: 8 câu cần 6 câu đúng; 10 câu cần 7. Không đạt vẫn giữ câu trả lời và gợi ý ôn lỗi sai. Có thể luyện lại không giới hạn; không phạt XP hoặc khóa ôn bằng “mạng sống”.
 
-Offline hiển thị điểm/tiến độ tạm, XP chờ xác nhận; có thể đi tiếp trên thiết bị theo kết quả tạm. Không tuyên bố điểm cục bộ là điểm chính thức. Bài chỉ gồm câu nghe chưa làm do thiếu TTS không được ngầm xem như đã vượt.
+Offline (từ tuần 6, chưa triển khai tuần 5) hiển thị điểm/tiến độ tạm, XP chờ xác nhận; có thể đi tiếp trên thiết bị theo kết quả tạm. Không tuyên bố điểm cục bộ là điểm chính thức. Bài chỉ gồm câu nghe chưa làm do thiếu TTS không được ngầm xem như đã vượt.
 
 ## 5. [THAY ĐỔI — 5A] Streak, review và thời gian
 
@@ -482,6 +482,79 @@ Năm nguyên tắc bắt buộc:
 
 ## 12. Điều kiện dừng và bước tiếp theo
 
-Tài liệu chốt phạm vi MVP và kế hoạch. Mọi field/index/migration/luồng mới chưa triển khai. Khi chủ dự án nói **“bắt đầu code”**, trước mỗi lát cắt cần làm cụ thể các hợp đồng còn mang tính triển khai (mặc định settings mới, cấu trúc gói seed, xác minh xóa web, backup/log retention) và báo cáo quyết định cần chủ dự án duyệt nếu có; không tự thêm dịch vụ hay tính năng ngoài tài liệu.
+Tài liệu chốt phạm vi MVP và kế hoạch. Hợp đồng tuần 5 được bổ sung tại mục 13. Bước 0 chỉ lấy baseline, chưa thay code/schema. Sau bước 0 và từng bước nhỏ phải dừng báo cáo, chờ chủ dự án nói **“tiếp tục”**. Không chuyển tuần 6 khi chưa được duyệt. Xác minh xóa web và backup/log retention vẫn là hợp đồng của giai đoạn sau, không triển khai trong tuần 5.
+
+## 13. [BỔ SUNG — ĐÃ DUYỆT] Hợp đồng thực hiện chỉ tuần 5
+
+### 13.1. Defaults, preflight chỉ đọc và profile adapter
+
+Defaults đúng mục 3.1. Trước V9, có bước preflight **chỉ đọc**, có thể chạy vận hành độc lập trên database đích để báo cáo user id và giá trị target_level/daily_goal lỗi; không xuất password/email/token. Kiểm tra mức không thuộc A1/B1/B2 hoặc NULL, goal NULL/ngoài 1–50, và điều kiện backfill cần thiết. Chưa truy cập database thực để chạy preflight ở bước 0; kiểm chứng fixture và xây công cụ thuộc bước 1.
+
+Không sửa dữ liệu trong preflight. Chạy lại ngay trước deploy và lưu bằng chứng. V9 kiểm tra lại trong transaction, vẫn dừng nếu còn lỗi để tránh phụ thuộc báo cáo cũ hoặc dữ liệu thay đổi giữa preflight và deploy. Không tự fallback cho dòng lỗi; báo chủ dự án xử lý.
+
+GET/PUT profile giữ field và kiểu DTO cũ, đọc/ghi từ learner_settings qua adapter; cập nhật tên ở users. Validation mức hỗ trợ A1/B1/B2. Đăng ký mới, cached profile Android và admin profile cũng theo cùng nguồn chính. Mirror target_level/daily_goal legacy cùng transaction trong thời gian tương thích; streakDays trả như hiện tại. Không xóa cột cũ tuần 5.
+
+### 13.2. JSON seed và schema kiểm tra
+
+Gói JSON bất biến, ID UUID cố định; schemaVersion = 1, packId UUID, contentStatus DEMO/REVIEWED, pronunciationLocale en-US. Có course, topic, unit và đúng ba lessons; vocabulary/snapshot/câu hỏi nằm trong gói với tham chiếu rõ ràng.
+
+| Thành phần | Kiểm tra bắt buộc |
+| --- | --- |
+| course/topic/unit | Các ID, code/slug/title/description/position đúng kiểu; FK nội bộ hợp lệ |
+| vocabularies | Word chuẩn hóa duy nhất; nghĩa/định nghĩa/phiên âm/ví dụ/level đúng cấu trúc; không ghi đè vocabulary cũ |
+| lessons | Đúng 3; ID và position duy nhất; unitId đúng; có revision/snapshot tối thiểu |
+| questions | 8–10 câu/bài; tuần 5 chỉ MEANING_CHOICE; prompt/explanation không rỗng |
+| options/answerKey | 4 option/câu; key và position duy nhất; một đáp án tham chiếu option có thật |
+| weight | Integer 1–10; nội dung demo trọng số 1; test thuật toán có trọng số khác nhau |
+| Toàn gói | Field bắt buộc/độ dài/allowlist; từ chối field lạ, ID trùng, tham chiếu sai hoặc snapshot không khớp |
+
+JSON Schema đi kèm là hợp đồng kiểm tra, không là lời hứa hỗ trợ toàn bộ chuẩn. Dùng Jackson và validation cho cấu trúc/ngữ nghĩa cụ thể, không thêm thư viện engine. Kiểm tra toàn gói trước khi ghi; import nguyên tử. File/checksum của gói đã nhập không được thay âm thầm.
+
+### 13.3. [SỬA THIẾT KẾ] DEMO không nằm trong migration chính
+
+Chủ dự án chỉ ra đúng: migration trong location chính chạy ở mọi môi trường. Vì vậy **V12 không chứa dữ liệu DEMO**.
+
+**Phương án triển khai được đề xuất trong hợp đồng này: seed runner riêng, gọi tường minh, có checksum và chạy một lần; không hook vào khởi động app.** Không chọn dev-only Flyway location để tránh một database có history V12 mà production không resolve được migration đó.
+
+- V9: learner_settings + kiểm tra/backfill.
+- V10: topic/curriculum/revision/snapshot/question/option và partial unique revision PUBLISHED.
+- V11: enrollment/attempt/answer/progress/XP, unique ACTIVE và thưởng lần đầu.
+- V12: **schema provenance và receipt import nội dung**, không chèn DEMO. Manifest ghi packId/checksum/contentStatus/importedAt; nội dung course/revision có dấu nguồn tương ứng để guard phát hiện DEMO, không chỉ dựa vào tên file JSON.
+- Runner chỉ cho profile dev/test, từ chối khi có prod/production kể cả bật kèm dev. Một lệnh vận hành tường minh nhập gói; không tự chạy khi khởi động, không bật bằng cấu hình mặc định.
+- Receipt nhập có khóa packId duy nhất. Cùng checksum là no-op; checksum khác bị từ chối. Concurrent import chỉ có một effect; receipt và toàn nội dung cùng transaction.
+- Gói ba bài DEMO phục vụ app dev/test và có nhãn nội dung tạm; không khẳng định được rà soát độc lập. Một chặng khoảng 15–18 từ, 24–30 câu chọn nghĩa. Nếu trùng word cũ, chỉ dùng lại khi nội dung tương thích hoặc dừng để xử lý; không upsert mù seed V5/dữ liệu admin.
+- **Startup guard production:** sau migration, trước phục vụ request, nếu manifest hoặc nội dung curriculum/revision có contentStatus = DEMO thì từ chối khởi động. Profile prod/production ưu tiên cấm hơn dev/test. Kiểm thử cả database đã nhập DEMO rồi đổi profile và trường hợp nội dung DEMO còn tồn tại dù thiếu receipt import.
+- REVIEWED sau này mới được seed qua migration chính mới. Không sửa V12/file đã nhập để nâng DEMO thành REVIEWED. V5 vocabulary legacy không bị tự gắn DEMO và không bị guard chặn chỉ vì chưa có provenance của curriculum mới.
+
+Chi tiết cột provenance/entrypoint runner được thực hiện trong bước 2; không thêm dịch vụ, thư viện hoặc CMS. Runner không là API upload nội dung.
+
+### 13.4. Chấm, hiển thị, retry và UUID Android
+
+- Đạt bài dùng so sánh số nguyên: 100 × tổng trọng số đúng ≥ 70 × tổng trọng số; không dùng tỷ lệ đã làm tròn.
+- UI chính: **số câu đúng / tổng số câu**. Nếu hiện phần trăm thì là phần trăm có trọng số **làm tròn xuống**; số câu đúng và điểm trọng số được phân biệt.
+- Phải trả lời đủ câu, không trùng câu/option không hợp lệ, tất cả cùng revision. Backend không tin score/XP/unlock client.
+- LESSON vượt lần đầu cấp 30 XP theo lesson ID ổn định; PRACTICE chỉ backend/test tuần 5, chưa có UI; không mở bài hoặc cấp thưởng LESSON.
+- Cùng UUID và payload ngữ nghĩa trả lại kết quả cũ. UUID cũ với payload khác trả 409. Canonical hash không phụ thuộc thứ tự field hoặc thứ tự danh sách answer; không bỏ qua thay đổi có ý nghĩa như revision/mode/answers.
+- Account khác không đọc hoặc tái dùng attempt để lấy kết quả. Không lộ người sở hữu hoặc payload của account khác.
+- Khóa ghi theo account và unique XP bảo vệ cạnh tranh. Hai ca concurrent trên **PostgreSQL thật**: cùng UUID → một attempt/thưởng; khác UUID cùng vượt lesson lần đầu → hai attempt nhưng một thưởng. Có test rollback cả attempt/answers/progress/XP khi lỗi giữa transaction.
+- Android dùng **SavedStateHandle** để giữ UUID attempt qua rotation và process recreation do hệ thống, cùng revision/mode/answers và trạng thái cần gửi lại. UUID được tạo trước gửi; không tạo lại khi recomposition, retry hoặc phục hồi. Chỉ attempt mới có UUID mới.
+- SavedStateHandle không là durable outbox và không bảo đảm phục hồi sau force-stop, clear data hoặc bỏ task. Tuần 5 chưa triển khai content pack/offline lesson/resume bền vững; không mở rộng sang tuần 6 để xử lý các trường hợp đó.
+- Attempt nộp trực tiếp online; mất phản hồi giữ cùng UUID để retry. Không đưa attempt vào outbox learning/review tuần 1–4; chưa sửa SyncEngine/Room để đồng bộ lesson offline.
+
+### 13.5. Các bước và điểm dừng
+
+| Bước | Phạm vi được phép khi chủ dự án nói tiếp tục | Bằng chứng |
+| --- | --- | --- |
+| 0 | Baseline tests/build hiện có; checksum V1–V8; inventory schema/test/env | Báo kết quả thực tế, không gọi kết quả lịch sử là baseline mới |
+| 1 | Test trước, settings/preflight/V9/profile adapter | Backfill/invalid data/legacy contract/rollback, regression đầy đủ |
+| 2 | Test trước, V10–V12/seed runner/schema/production guard | PostgreSQL partial indexes, import atomic/checksum/concurrent, production DEMO rejection, bảo toàn V8 |
+| 3 | Test trước, thuật toán chấm thuần | Trọng số, đúng/dưới/trên 70%, phần trăm floor không quyết định pass |
+| 4 | Test trước, API/progress/XP | Ownership, retry/conflict/mode, rollback và hai ca concurrent PostgreSQL |
+| 5 | Test trước, UI online bài đầu | UUID SavedStateHandle rotation/process recreation, double-submit/retry, profile compatibility |
+| 6 | Nghiệm thu riêng tuần 5 | Bằng chứng từng tiêu chí mục 10, tests/regression và việc chưa làm |
+
+Mỗi bước: test trước hành vi quan trọng → triển khai → chạy toàn bộ tests hiện có (Android unit/Robolectric, backend H2 và postgresTest) → báo kết quả → **dừng chờ “tiếp tục”**, không tự sang bước sau. Admin chưa có test suite trong package.json; build TypeScript/Vite là build, không gọi là test. Lint/APK/bootJar kiểm tra ở baseline và checkpoint tích hợp. Không đụng camera, review scheduler, analytics; không thêm thư viện/dịch vụ. Không sửa V1–V8, destructive migration hoặc dữ liệu database thực để lấy baseline.
+
+Sau bước 6 vẫn dừng để chủ dự án duyệt tuần 5; tuần 6 chưa được cấp quyền tự thực hiện.
 
 Tham chiếu kỹ thuật/phát hành để kiểm tra lại trước release: [partial unique indexes PostgreSQL](https://www.postgresql.org/docs/current/indexes-partial.html), [Android TTS Voice](https://developer.android.com/reference/android/speech/tts/Voice), [Google Play Data Safety](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en), [account deletion](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en). Các liên kết không là xác nhận app đã tuân thủ.
