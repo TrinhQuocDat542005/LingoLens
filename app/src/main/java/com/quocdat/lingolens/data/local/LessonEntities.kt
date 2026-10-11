@@ -30,6 +30,14 @@ data class CurriculumAccountState(val accountId: Long, val courseId: String, val
 
 @Dao
 interface LessonDao {
+    @Query("SELECT * FROM ContentPack WHERE accountId=:accountId")
+    fun observePacks(accountId:Long):kotlinx.coroutines.flow.Flow<List<ContentPack>>
+    @Query("SELECT * FROM LessonSession WHERE accountId=:accountId")
+    fun observeSessions(accountId:Long):kotlinx.coroutines.flow.Flow<List<LessonSession>>
+    @Query("SELECT * FROM LessonAttemptOutbox WHERE accountId=:accountId")
+    fun observeOutbox(accountId:Long):kotlinx.coroutines.flow.Flow<List<LessonAttemptOutbox>>
+    @Query("SELECT * FROM CurriculumAccountState WHERE accountId=:accountId")
+    fun observeCurriculum(accountId:Long):kotlinx.coroutines.flow.Flow<List<CurriculumAccountState>>
     @Insert suspend fun insertPack(pack: ContentPack)
     @Query("SELECT * FROM ContentPack WHERE accountId=:accountId AND revisionId=:revisionId AND complete=1")
     suspend fun pack(accountId: Long, revisionId: String): ContentPack?

@@ -38,6 +38,12 @@ class LessonSessionRepository(private val db:LearningDatabase,private val packs:
         val session=resume(account,id)
         return PackGrader.grade(pack(account,session.revisionId).questions,answers(session).map{SubmittedAnswer(UUID.fromString(it.key),it.value)})
     }
+    suspend fun move(account:Long,id:String,position:Int)=db.withTransaction {
+        val session=resume(account,id)
+        check(session.phase=="ANSWERING" && session.frozenPayloadJson==null){"Submission is immutable"}
+        require(position in pack(account,session.revisionId).questions.indices)
+        db.lessonDao().saveSession(session.copy(position=position,updatedAt=clock()));signedIn(account)
+    }
     suspend fun submit(account:Long,id:String,offline:Boolean):String {
         val payload=db.withTransaction {
             val session=resume(account,id)
@@ -57,12 +63,14 @@ class LessonSessionRepository(private val db:LearningDatabase,private val packs:
         scheduleSync(account);return payload
     }
     private suspend fun pack(account:Long,revision:String):LessonPack = packs.parse(checkNotNull(db.lessonDao().pack(account,revision)){"Complete pack required"}.contentJson)
-    private suspend fun canOpen(account:Long,target:LessonPack):Boolean {
+    suspend fun canOpen(account:Long,target:LessonPack):Boolean {
+        signedIn(account)
+        if(db.lessonDao().curriculum(account,target.courseId)?.enrollmentStatus!="ACTIVE") return false
         val course=packs.ready(account,target.courseId)
         if(course.size!=3) return false
         val confirmed=JsonParser.parseString(db.lessonDao().curriculum(account,target.courseId)!!.confirmedProgressJson).asJsonArray
             .filter{it.asJsonObject["passed"]?.asBoolean==true}.map{it.asJsonObject["lessonId"].asString}.toSet()
-        val provisional=db.lessonDao().sessions(account).filter{it.mode=="LESSON" && it.phase in setOf("QUEUED","WAITING_PREREQUISITE","CONFIRMED")}.filter{session ->
+        val provisional=db.lessonDao().sessions(account).filter{it.mode=="LESSON" && it.phase in setOf("QUEUED","WAITING_PREREQUISITE")}.filter{session ->
             try{PackGrader.grade(pack(account,session.revisionId).questions,answers(session).map{SubmittedAnswer(UUID.fromString(it.key),it.value)}).passed}
             catch(error:kotlinx.coroutines.CancellationException){throw error}catch(_:Exception){false}
         }.map{it.lessonId}.toSet()

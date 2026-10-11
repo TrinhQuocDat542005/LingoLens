@@ -91,4 +91,8 @@ class AppContainer(context: Context) {
         com.quocdat.lingolens.lesson.RemoteLessonSyncGateway(authenticatedRetrofit.create(com.quocdat.lingolens.lesson.LessonSyncApi::class.java)),
         isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id })
     val syncCoordinator = com.quocdat.lingolens.sync.SyncCoordinator(syncEngine::run,lessonSyncEngine::run)
+    val lessonStudyRepository = com.quocdat.lingolens.lesson.LessonStudyRepository(learningDatabase,contentPackRepository,lessonSessionRepository,
+        com.quocdat.lingolens.lesson.RemoteStudyGateway(authenticatedRetrofit.create(com.quocdat.lingolens.lesson.StudyApi::class.java),
+            com.quocdat.lingolens.lesson.RemoteLessonSyncGateway(authenticatedRetrofit.create(com.quocdat.lingolens.lesson.LessonSyncApi::class.java))),
+        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id },scheduleSync = syncScheduler::schedule)
 }

@@ -4,15 +4,17 @@
 
 [![CI](https://github.com/TrinhQuocDat542005/LingoLens/actions/workflows/ci.yml/badge.svg)](https://github.com/TrinhQuocDat542005/LingoLens/actions/workflows/ci.yml)
 
-LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin console. The week 5 feature branch adds a first guided lesson: study vocabulary, answer meaning questions and earn server-confirmed XP. Capture everyday objects, select a detected bounding box and explore English vocabulary. Images are processed on the phone and are not uploaded to the API.
+LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin console. Follow a three-lesson stage, study vocabulary, answer meaning questions and earn server-confirmed XP. Capture everyday objects, select a detected bounding box and explore English vocabulary. Images are processed on the phone and are not uploaded to the API.
 
-**Week 5 status:** implementation is on `codex/week5/step1-settings`, awaiting owner testing before acceptance and merge. Three lessons are seeded as **dev/test DEMO content**; the Android flow currently covers the first lesson. See the [dev setup and manual test guide](docs/product/week5-testing.md). DEMO content is rejected in production.
+**Branch status:** week 5 code was merged in PR #2 (`e1da7b7`). Week 6 steps 0–6 are on `feature/offline-lessons`, awaiting owner device testing before step 7 and a pull request; they are not merged into main. All three lessons use **dev/test DEMO content**. See the [step 6 report](docs/portfolio/week6-step6.md) and [installation, database backup and manual test guide](docs/product/week6-testing.md). DEMO content is rejected in production; independent content review is required before week 8.
 
 ## Implemented features
 
-- First guided lesson with vocabulary snapshots, sentence patterns, meaning questions and correct/total results.
+- Three guided lessons with vocabulary snapshots, sentence patterns, meaning questions and correct/total results.
 - Server grading with an integer weighted 70% threshold, one-time lesson XP and idempotent attempt UUIDs.
-- Android SavedStateHandle recovery for rotation/system recreation, with a frozen retry payload; lesson attempts use direct online requests.
+- Authenticated content packs with schema/size/SHA-256 checks; a stage becomes usable after all three packs are complete.
+- Account-scoped Room v4 lesson sessions, answers and immutable attempt queues. Offline progress is provisional; official progress and XP come from server confirmation.
+- Independent lesson and word/review synchronization through WorkManager, stable attempt UUIDs, revision pinning and retained answers for rejected submissions.
 - Compatible legacy profile API backed by learner settings; PostgreSQL migrations and a manual checksum-based dev/test seed importer.
 
 - CameraX capture, EXIF orientation handling and image downsampling.
@@ -43,7 +45,7 @@ LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin con
 8. Sign in with the same account on another installation and sync to restore the saved library and first-learning history.
 9. Edit/publish vocabulary in the admin console, use **Refresh content** on the result screen and see the revised content.
 
-For the first guided lesson, seed the DEMO pack explicitly and open **Home → Mở bài học**. See [week 5 testing](docs/product/week5-testing.md) for backend/ADB commands, expected XP and retry/rotation/network scenarios. Offline lesson packs, durable lesson outbox and the PRACTICE UI are pending later work; saved-word/review synchronization remains available.
+For guided lessons, seed the DEMO pack explicitly and open **Home → Mở bài học → Tải chặng**. Study all three lessons offline, then reconnect for server confirmation. See [week 6 testing](docs/product/week6-testing.md) for backend/ADB commands and interruption, upgrade and account-switch scenarios. Real device process-death/reboot acceptance is pending; PRACTICE has backend support and no UI.
 
 On-device processing keeps captured images off the server. Saved snapshots contain vocabulary text; temporary image paths are not persisted in the library.
 
@@ -193,6 +195,8 @@ npm run build
 | Learning events | First save per account and word / Room and PostgreSQL | Drive daily counts, 7-day activity and streak; merge earliest first-save date |
 | Review schedules / answers | Shared Kotlin scheduler, account-scoped Room + PostgreSQL | Reveal and grade offline; durable upload, replay-safe history and cloud restoration |
 | Review session | Account-scoped Room, up to 20 word keys | Resume position and revealed answer after interruption; session cursor stays on this installation |
+| Lesson content / session / attempt | Authenticated immutable revision packs and account-scoped Room v4 | Complete three-pack download and enrollment first; answers/UUID/revision persist locally, attempts retry without changing payload |
+| Lesson progress / XP | Server-confirmed course snapshot in Room | Provisional pass can open the next lesson offline; pending attempts grant no official XP, permanent rejection retains answers |
 | Session | Keystore-encrypted tokens + cached profile / DataStore | Cached profile only on connection failure; rejected credentials do not restore it |
 | Recognition history / corrections | Room outbox → API / PostgreSQL | Queue without a connection; corrections depend on their recognition operation |
 
@@ -246,6 +250,7 @@ The bundled EfficientDet-Lite0 INT8 model is pretrained for COCO and used throug
 2. Persistent words per account, vocabulary API/cache, local learning statistics and real Text-to-Speech — [week 2 report](docs/portfolio/week2.md).
 3. Offline write queue, retry, idempotent sync and cloud library restoration — [week 3 report](docs/portfolio/week3.md).
 4. Offline spaced review, durable sessions, shared scheduling and review statistics — [week 4 report](docs/portfolio/week4.md).
-5. Planned: a vertical learning slice, curriculum content, lesson grading/XP and offline completion — [approved v2 specification and weeks 5–9 plan](docs/product/lingolens-spec-v2.md). Implementation awaits the project owner's explicit request.
+5. Guided learning backend, compatible learner settings and one-time lesson XP — week 5 code merged in PR #2 (`e1da7b7`).
+6. Three-lesson offline UI, durable packs/sessions/attempt sync — [week 6 step 6 report](docs/portfolio/week6-step6.md), feature branch awaiting device testing and step 7 acceptance.
 
-The v2 specification includes the required account-deletion and privacy preparation before release. It describes planned behavior; the implemented features listed above remain the current application.
+The [approved v2 specification and weeks 5–9 plan](docs/product/lingolens-spec-v2.md) also includes account deletion and privacy preparation before release. Those later milestones are still planned work.

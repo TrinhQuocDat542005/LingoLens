@@ -118,6 +118,14 @@ class LessonSyncEngineTest {
         assertEquals("QUEUED",db.lessonDao().session(1,session.id)?.phase);assertEquals("PENDING",db.lessonDao().outbox(1,session.id)?.state);assertEquals(0,db.lessonDao().curriculum(1,packs[0].courseId)?.confirmedXpTotal)
         failAck=false;assertEquals(SyncOutcome.COMPLETE,engine.run(1));assertEquals(30,db.lessonDao().curriculum(1,packs[0].courseId)?.confirmedXpTotal)
     }
+    @Test fun `unsent A lesson survives logout and B login without any A dispatch`()=runBlocking {
+        val session=enqueue(0);val before=db.lessonDao().outbox(1,session.id)
+        signedIn=0;assertEquals(SyncOutcome.PAUSED,engine.run(1));assertTrue(calls.isEmpty())
+        signedIn=2;assertEquals(SyncOutcome.PAUSED,engine.run(1));assertTrue(calls.isEmpty())
+        assertEquals(SyncOutcome.COMPLETE,engine.run(2));assertTrue(calls.isEmpty());assertTrue(server.isEmpty())
+        assertEquals(before,db.lessonDao().outbox(1,session.id));assertNull(db.lessonDao().session(2,session.id))
+        signedIn=1;assertEquals(SyncOutcome.COMPLETE,engine.run(1));assertEquals(1,calls.size)
+    }
     @Test fun `unexpected acknowledgement never confirms another UUID`()=runBlocking {
         val session=enqueue(0);wrongResponse=true
         assertEquals(SyncOutcome.RETRY,engine.run(1));assertEquals("PENDING",db.lessonDao().outbox(1,session.id)?.state);assertNull(db.lessonDao().session(1,session.id)?.serverResultJson)
