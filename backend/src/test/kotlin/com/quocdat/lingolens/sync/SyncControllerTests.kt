@@ -34,6 +34,38 @@ class SyncControllerTests {
             .content("""{"accountId":${user.first},"operationId":"$id","kind":"$kind","payload":$payload}"""))
     private val snapshot = """{"id":"book","word":"book","translation":"sách","partOfSpeech":"Noun","definition":"A book","level":"A1","synonyms":[],"exampleSentence":"Read a book.","exampleSentenceB2":""}"""
 
+    @Test fun `review replay is atomic restores schedules and retains deleted history`() {
+        val user = user(); val time = System.currentTimeMillis()
+        send(user, UUID.randomUUID().toString(), "SAVE_WORD", """{"word":"book","content":$snapshot,"savedAt":$time,"firstLearnedAt":$time}""").andExpect(status().isOk)
+        val id = UUID.randomUUID().toString()
+        val payload = """{"word":"book","grade":"GOOD","reviewedAt":$time}"""
+        repeat(2) { send(user, id, "REVIEW_WORD", payload).andExpect(status().isOk) }
+        send(user, id, "REVIEW_WORD", """{"word":"book","grade":"EASY","reviewedAt":$time}""").andExpect(status().isConflict)
+        mvc.perform(get("/api/v1/sync/reviews").param("accountId", user.first.toString()).header("Authorization", "Bearer ${user.second}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.data.cards[0].intervalDays").value(1))
+            .andExpect(jsonPath("$.data.cards[0].repetitions").value(1)).andExpect(jsonPath("$.data.events.length()").value(1))
+        send(user, UUID.randomUUID().toString(), "DELETE_WORD", """{"word":"book"}""").andExpect(status().isOk)
+        send(user, UUID.randomUUID().toString(), "REVIEW_WORD", """{"word":"book","grade":"AGAIN","reviewedAt":$time}""").andExpect(status().isOk)
+        org.junit.jupiter.api.Assertions.assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM review_events WHERE user_id = ?", Int::class.java, user.first)!!)
+        org.junit.jupiter.api.Assertions.assertEquals(true, jdbc.queryForObject("SELECT deleted FROM learning_entries WHERE user_id = ? AND word = 'book'", Boolean::class.java, user.first))
+        val other = user()
+        mvc.perform(get("/api/v1/sync/reviews").param("accountId", user.first.toString()).header("Authorization", "Bearer ${other.second}"))
+            .andExpect(status().isForbidden)
+        send(other, UUID.randomUUID().toString(), "REVIEW_WORD", payload).andExpect(status().isBadRequest)
+    }
+    @Test @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    fun `invalid review cannot mutate schedule or leave receipt`() {
+        val user = user(); val time = System.currentTimeMillis()
+        send(user, UUID.randomUUID().toString(), "SAVE_WORD", """{"word":"book","content":$snapshot,"savedAt":$time,"firstLearnedAt":$time}""").andExpect(status().isOk)
+        listOf("""{"word":"book","grade":"INVALID","reviewedAt":$time}""", """{"word":"book","grade":"GOOD","reviewedAt":-1}""",
+            """{"word":"book","grade":"GOOD","reviewedAt":"123"}""").forEach {
+            send(user, UUID.randomUUID().toString(), "REVIEW_WORD", it).andExpect(status().isBadRequest)
+        }
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM review_events WHERE user_id = ?", Int::class.java, user.first)!!)
+        org.junit.jupiter.api.Assertions.assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM sync_receipts WHERE user_id = ?", Int::class.java, user.first)!!)
+        org.junit.jupiter.api.Assertions.assertEquals(time, jdbc.queryForObject("SELECT due_at FROM review_cards WHERE user_id = ?", Long::class.java, user.first))
+    }
+
     @Test fun `learning operations replay exactly once and deletion retains learning history`() {
         val user = user(); val id = UUID.randomUUID().toString(); val time = System.currentTimeMillis()
         val body = """{"word":"book","content":$snapshot,"savedAt":$time,"firstLearnedAt":$time}"""

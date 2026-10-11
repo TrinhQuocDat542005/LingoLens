@@ -55,6 +55,14 @@ After draining, the client downloads the account's complete learning snapshot an
 
 References: [Android offline-first guidance](https://developer.android.com/topic/architecture/data-layer/offline-first), [WorkManager versions](https://developer.android.com/jetpack/androidx/releases/work) and [unique work policies](https://developer.android.com/reference/androidx/work/ExistingWorkPolicy).
 
+## Spaced review
+
+Room v3 adds account-scoped review cards, immutable answer events and installation-local sessions. Due queries join the saved library. A grade transaction updates the schedule and cursor, appends history and queues a stable UUID; deleting a word preserves its prior schedule and answers. Explicit 1 → 2 → 3 migration initializes old libraries.
+
+Android and Spring compile the same dependency-free Kotlin scheduler from `shared/`; the backend Docker build copies that directory as well as `backend/`. Four grades select documented learning steps and bounded day intervals. Flyway V8 backfills cloud cards; account locking and transactional receipts protect concurrent review retries. Full learning and review snapshots restore schedules/history while pending words remain protected. See [algorithm and user flow](spaced-review.md).
+
+Review statistics report actual answer activity and self-reported recall; they do not assert measured retention or proficiency. Streak includes both saving and reviewing; the new-word goal retains its first-save semantics.
+
 ## Next milestone
 
-Spaced repetition, due-review scheduling, retention statistics and physical-device failure testing.
+Physical-device failure testing, model benchmarks, demo video and release.

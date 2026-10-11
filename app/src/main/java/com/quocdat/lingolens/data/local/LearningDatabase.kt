@@ -55,11 +55,23 @@ interface SyncDao {
     @Upsert suspend fun saveAccount(account: SyncAccount)
 }
 
-@Database(entities = [SavedWordEntity::class, LearningEvent::class, VocabularyCache::class, OutboxOperation::class, SyncAccount::class], version = 2, exportSchema = true)
+@Database(entities = [SavedWordEntity::class, LearningEvent::class, VocabularyCache::class, OutboxOperation::class, SyncAccount::class,
+    ReviewCard::class, ReviewEvent::class, ReviewSession::class], version = 3, exportSchema = true)
 abstract class LearningDatabase : RoomDatabase() {
     abstract fun learningDao(): LearningDao
     abstract fun syncDao(): SyncDao
+    abstract fun reviewDao(): ReviewDao
     companion object {
+        val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS ReviewCard (accountId INTEGER NOT NULL, word TEXT NOT NULL, dueAt INTEGER NOT NULL, intervalDays INTEGER NOT NULL, ease REAL NOT NULL, repetitions INTEGER NOT NULL, lapses INTEGER NOT NULL, stage TEXT NOT NULL, lastReviewedAt INTEGER, PRIMARY KEY(accountId, word))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS ReviewEvent (id TEXT PRIMARY KEY NOT NULL, accountId INTEGER NOT NULL, word TEXT NOT NULL, grade TEXT NOT NULL, reviewedAt INTEGER NOT NULL, sessionId TEXT)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_ReviewEvent_accountId_reviewedAt ON ReviewEvent(accountId, reviewedAt)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS ReviewSession (id TEXT PRIMARY KEY NOT NULL, accountId INTEGER NOT NULL, words TEXT NOT NULL, position INTEGER NOT NULL, revealed INTEGER NOT NULL, startedAt INTEGER NOT NULL, finishedAt INTEGER)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_ReviewSession_accountId_finishedAt ON ReviewSession(accountId, finishedAt)")
+                db.execSQL("INSERT INTO ReviewCard SELECT accountId, word, savedAt, 0, 2.5, 0, 0, 'NEW', NULL FROM SavedWordEntity")
+            }
+        }
         val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS OutboxOperation (sequence INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, operationId TEXT NOT NULL, accountId INTEGER NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, state TEXT NOT NULL, attempts INTEGER NOT NULL, lastError TEXT)")

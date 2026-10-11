@@ -21,6 +21,7 @@ class LearningRepository(private val db: LearningDatabase, private val gson: Gso
         val snapshot = word.copy(id = key, word = key, timestamp = savedAt, imagePath = null, audioPath = null)
         dao.save(SavedWordEntity(accountId, key, gson.toJson(snapshot), savedAt))
         dao.record(LearningEvent(accountId, key, now))
+        db.reviewDao().initialize(ReviewCard(accountId, key, now))
         db.syncDao().enqueue(OutboxOperation(operationId = java.util.UUID.randomUUID().toString(), accountId = accountId,
             kind = "SAVE_WORD", payload = gson.toJson(mapOf("word" to key, "content" to snapshot, "savedAt" to savedAt,
                 "firstLearnedAt" to dao.event(accountId, key)!!.occurredAt))))

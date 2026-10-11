@@ -41,7 +41,9 @@ fun StatsScreen(navController: NavController) {
     val words by remember(session.profile.id) { repository.words(session.profile.id) }.collectAsState(initial = emptyList())
     val events by remember(session.profile.id) { repository.events(session.profile.id) }.collectAsState(initial = emptyList())
     val stats = LearningStats.calculate(events)
-    val user = User(session.profile.name, session.profile.targetLevel, stats.streak, words.size, session.profile.dailyGoal)
+    val reviews by remember(session.profile.id) { session.container.reviewRepository.events(session.profile.id) }.collectAsState(initial = emptyList())
+    val activity = LearningStats.calculate(events + reviews.map { com.quocdat.lingolens.data.local.LearningEvent(session.profile.id, it.id, it.reviewedAt) })
+    val user = User(session.profile.name, session.profile.targetLevel, activity.streak, words.size, session.profile.dailyGoal)
 
 
     val weeklyData = stats.weekly
@@ -66,6 +68,7 @@ fun StatsScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            com.quocdat.lingolens.ui.learning.ReviewOverviewCard(navController, statistics = true)
             // General Stats grid
             Row(
                 modifier = Modifier.fillMaxWidth(),

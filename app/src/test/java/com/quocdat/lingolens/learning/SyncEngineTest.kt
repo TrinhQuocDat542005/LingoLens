@@ -32,7 +32,7 @@ class SyncEngineTest {
     private var signedIn = 1L
     private fun open() {
         db = Room.databaseBuilder(context, LearningDatabase::class.java, "sync-test.db")
-            .addMigrations(LearningDatabase.MIGRATION_1_2).allowMainThreadQueries().build()
+            .addMigrations(LearningDatabase.MIGRATION_1_2, LearningDatabase.MIGRATION_2_3).allowMainThreadQueries().build()
         learning = LearningRepository(db)
     }
     @Before fun setup() = runBlocking { context.deleteDatabase("sync-test.db"); open(); db.syncDao().saveAccount(SyncAccount(1, true)) }
@@ -44,6 +44,8 @@ class SyncEngineTest {
         var error: Exception? = null
         var loseResponse = false
         var snapshot: List<CloudEntry> = emptyList()
+        var reviews = ReviewSnapshot(emptyList(), emptyList())
+        override suspend fun reviews(account: Long, accountId: Long) = ApiEnvelope(true, "ok", reviews)
         var duringPull: (suspend () -> Unit)? = null
         override suspend fun apply(account: Long, request: SyncRequest): ApiEnvelope<SyncReceipt> {
             calls += request
@@ -57,6 +59,31 @@ class SyncEngineTest {
         }
     }
     private fun engine(api: SyncApi) = SyncEngine(db, api, { it == signedIn })
+    @Test fun `review pull restores schedule and deduplicates history`() = runBlocking {
+        val api = FakeApi().apply {
+            snapshot = listOf(CloudEntry("book", gson.toJson(word()), 100, 100, false))
+            reviews = ReviewSnapshot(listOf(CloudReviewCard("book", 90000, 1, 2.5, 1, 0, "REVIEW", 200)), listOf(CloudReviewEvent("event", "book", "GOOD", 200)))
+        }
+        repeat(2) { assertEquals(SyncOutcome.COMPLETE, engine(api).run(1)) }
+        assertEquals(90000L, db.reviewDao().card(1, "book")!!.dueAt)
+        assertEquals(1, db.reviewDao().events(1).first().size)
+        assertTrue(db.reviewDao().events(2).first().isEmpty())
+    }
+    @Test fun `offline grade made during pull protects its schedule and history`() = runBlocking {
+        learning.save(1, word(), 100)
+        val repository = ReviewRepository(db)
+        val session = repository.start(1, now = 100)
+        repository.reveal(1, session.session.id)
+        val api = FakeApi().apply {
+            snapshot = listOf(CloudEntry("book", gson.toJson(word()), 100, 100, false))
+            reviews = ReviewSnapshot(listOf(CloudReviewCard("book", 100, 0, 2.5, 0, 0, "NEW", null)), emptyList())
+            duringPull = { repository.grade(1, session.session.id, 0, com.quocdat.lingolens.review.core.ReviewGrade.EASY, 200) }
+        }
+        assertEquals(SyncOutcome.COMPLETE, engine(api).run(1))
+        assertEquals(4, db.reviewDao().card(1, "book")!!.intervalDays)
+        assertEquals("REVIEW_WORD", db.syncDao().pending(1).single().kind)
+        assertEquals(1, db.reviewDao().events(1).first().size)
+    }
     @Test fun `local edit and durable queue survive reopen with FIFO order`() = runBlocking {
         learning.save(1, word()); learning.delete(1, "book")
         val before = db.syncDao().pending(1).map { it.operationId }

@@ -7,6 +7,7 @@ plugins {
 }
 
 group = "com.quocdat.lingolens"
+kotlin.sourceSets.getByName("main").kotlin.srcDir("../shared/src/main/kotlin")
 version = "1.0.0"
 
 java {

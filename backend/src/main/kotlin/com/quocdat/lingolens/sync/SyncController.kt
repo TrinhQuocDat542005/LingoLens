@@ -33,11 +33,15 @@ class SyncController(private val service: SyncService) {
     @GetMapping("/learning")
     fun learning(@RequestParam accountId: Long, auth: Authentication) =
         ApiResponse.success("Learning snapshot loaded", service.snapshot(accountId, auth.name))
+    @GetMapping("/reviews")
+    fun reviews(@RequestParam accountId: Long, auth: Authentication) =
+        ApiResponse.success("Review snapshot loaded", service.reviews(accountId, auth.name))
 }
 
 @Service
 class SyncService(private val jdbc: JdbcTemplate, private val users: UserRepository,
-    private val recognition: RecognitionService, private val mapper: ObjectMapper, private val validator: Validator) {
+    private val recognition: RecognitionService, private val mapper: ObjectMapper, private val validator: Validator,
+    private val reviewStore: ReviewStore) {
     private fun account(accountId: Long, email: String): Long {
         val id = users.findByEmail(email).orElseThrow().id!!
         if (id != accountId) throw ResponseStatusException(HttpStatus.FORBIDDEN, "Sync account does not match session")
@@ -80,11 +84,21 @@ class SyncService(private val jdbc: JdbcTemplate, private val users: UserReposit
                         val savedAt = p.path("savedAt").asLong().also(::validTime)
                         jdbc.update("UPDATE learning_entries SET content = ?, saved_at = ?, first_learned_at = ?, deleted = FALSE WHERE user_id = ? AND word = ?",
                             content.toString(), savedAt, earliest ?: savedAt, id, word)
+                        reviewStore.initialize(id, word, savedAt)
                     }
                     "DELETE_WORD" -> jdbc.update("UPDATE learning_entries SET deleted = TRUE WHERE user_id = ? AND word = ?", id, word)
                     else -> { require(first != null) { "Missing first learning time" }
                         jdbc.update("UPDATE learning_entries SET first_learned_at = ? WHERE user_id = ? AND word = ?", earliest, id, word) }
                 }
+                null
+            }
+            "REVIEW_WORD" -> {
+                val word = p.path("word").asText().trim().lowercase(Locale.ROOT)
+                require(word.isNotBlank() && word.length <= 100) { "Invalid word" }
+                require(p.path("reviewedAt").isIntegralNumber) { "Invalid review time" }
+                val time = p.path("reviewedAt").asLong().also(::validTime)
+                val grade = com.quocdat.lingolens.review.core.ReviewGrade.valueOf(p.path("grade").asText())
+                reviewStore.review(id, request.operationId, word, grade, time)
                 null
             }
             "RECOGNITION" -> {
@@ -104,6 +118,8 @@ class SyncService(private val jdbc: JdbcTemplate, private val users: UserReposit
         jdbc.update("INSERT INTO sync_receipts(user_id, operation_id, request_hash, operation_kind, remote_id) VALUES (?, ?, ?, ?, ?)", id, request.operationId, hash, request.kind, remoteId)
         return SyncReceipt(request.operationId, remoteId)
     }
+    @Transactional(readOnly = true)
+    fun reviews(accountId: Long, email: String): ReviewSnapshot = reviewStore.snapshot(account(accountId, email))
     @Transactional(readOnly = true)
     fun snapshot(accountId: Long, email: String): List<CloudEntry> {
         val id = account(accountId, email)

@@ -18,10 +18,11 @@ LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin con
 - Published vocabulary API, transactional catalog cache refresh and offline access to downloaded/saved content.
 - Real device Text-to-Speech with language availability checks and lifecycle cleanup.
 - Recognition history and correction reports synchronized to the API.
+- Offline flashcard review with four grades, resumable sessions, shared scheduling and synchronized answer history.
 - Admin console for user status/roles, vocabulary publishing, correction review and audit logs.
 - Flyway migrations, API/unit tests, PostgreSQL integration tests and CI build artifacts.
 
-**Current limits:** Learning data synchronizes with the account through a durable local queue; spaced repetition is planned. Conflicting edits from different devices use server arrival order (last accepted save/delete wins). First login and first content download require the API. A previously signed-in account can reopen using its cached profile during a network outage; offline access cannot detect server-side account revocation until reconnection. TTS depends on an installed English voice and the engine may require a network connection. Model accuracy has not yet been measured; see the [evaluation protocol](docs/model-evaluation/README.md).
+**Current limits:** Learning and review data synchronize through a durable local queue. Review scheduling uses a custom heuristic; reported recall is self-assessed. Conflicting edits from different devices use server arrival order (last accepted save/delete wins; reviews apply in acceptance order). First login and first content download require the API. A previously signed-in account can reopen using its cached profile during a network outage; offline access cannot detect server-side account revocation until reconnection. TTS depends on an installed English voice and the engine may require a network connection. Model accuracy has not yet been measured; see the [evaluation protocol](docs/model-evaluation/README.md).
 
 ## Try the learning loop
 
@@ -30,6 +31,7 @@ LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin con
 3. Capture a supported object (for example, a book), choose a detection and open its published vocabulary.
 4. Play the English pronunciation, save the word and check My Words / Stats and the sync status card.
 5. Reopen the app: the saved word remains. Switch accounts: each account has its own library.
+6. Open Review, recall the word, reveal the answer and grade it. Interrupt another session and reopen to resume; reconnect to restore schedules and answers on another installation.
 6. After Home downloads the catalog, disconnect the network and save/delete words or queue a correction. Reconnect: the pending count drains automatically; **Sync / retry** also requests a run.
 7. Sign in with the same account on another installation and sync to restore the saved library and first-learning history.
 8. Edit/publish vocabulary in the admin console, use **Refresh content** on the result screen and see the revised content.
@@ -47,6 +49,9 @@ flowchart LR
     Result --> Cache[Room: catalog / account word library]
     Result --> TTS[Device Text-to-Speech]
     Cache --> Progress[Local learning events / statistics]
+    Cache --> Review[Offline review / saved session]
+    Review --> Scheduler[Shared Kotlin scheduler]
+    Review --> Outbox
     Cache --> Outbox[Room outbox / stable operation IDs]
     Outbox --> Worker[WorkManager: connected / exponential retry]
     Worker --> Sync[Account-scoped sync API / receipts]
@@ -159,6 +164,8 @@ From the repository root:
 .\gradlew.bat testDebugUnitTest lintDebug assembleDebug
 .\backend\gradlew.bat -p backend test bootJar
 .\backend\gradlew.bat -p backend postgresTest
+# Optional: HTTP review smoke against a disposable running API (creates a learner)
+.\scripts\smoke-review.ps1 -ApiBaseUrl http://localhost:8080
 cd admin-dashboard
 npm ci
 npm run build
@@ -175,6 +182,8 @@ npm run build
 | Published vocabulary | API / PostgreSQL, shared Room cache | Read after download; manual refresh checks latest publication |
 | Saved words | Account ID + normalized word / Room and PostgreSQL | Save/delete locally; durable queue uploads, cloud snapshot restores other installations |
 | Learning events | First save per account and word / Room and PostgreSQL | Drive daily counts, 7-day activity and streak; merge earliest first-save date |
+| Review schedules / answers | Shared Kotlin scheduler, account-scoped Room + PostgreSQL | Reveal and grade offline; durable upload, replay-safe history and cloud restoration |
+| Review session | Account-scoped Room, up to 20 word keys | Resume position and revealed answer after interruption; session cursor stays on this installation |
 | Session | Keystore-encrypted tokens + cached profile / DataStore | Cached profile only on connection failure; rejected credentials do not restore it |
 | Recognition history / corrections | Room outbox → API / PostgreSQL | Queue without a connection; corrections depend on their recognition operation |
 
@@ -198,11 +207,20 @@ Local edits and their upload intent commit together in Room. Connected WorkManag
 ```http
 POST /api/v1/sync/operations
 GET /api/v1/sync/learning?accountId=123
+GET /api/v1/sync/reviews?accountId=123
 ```
 
 Every operation carries a stable UUID and expected account ID. The server checks that account against the authenticated user, locks account writes, and commits the operation plus its receipt atomically. A replay returns the original receipt; reusing an ID with different content returns `409`. Old replays cannot resurrect words deleted by later operations. Corrections reference the UUID of their recognition, so both can be queued offline.
 
 Cloud pull uses a full account snapshot after draining the queue, preserving local edits made while the download was in flight. Tombstones retain deletion and first-learning history. WorkManager execution timing depends on Android scheduling; it is not an exact timer. See the [sync protocol and conflict policy](docs/sync-protocol.md).
+
+### Spaced review
+
+Save a word, then open **Ôn tập cách quãng** from Home, My Words or Stats. Recall its meaning, reveal the answer, and select Again / Hard / Good / Easy. A session contains at most 20 due words; the saved cursor and answer visibility survive interruption. Words removed during a session are skipped. A forgotten word becomes due in a later session after one minute.
+
+Android and the API compile the same [pure Kotlin scheduler](shared/src/main/kotlin/com/quocdat/lingolens/review/core/ReviewScheduler.kt). New cards use 1 minute / 10 minutes / 1 day / 4 days; subsequent review intervals grow by grade, bounded to 365 days. This is a documented product heuristic, **not FSRS or SM-2**, and no measured retention improvement is claimed. Stats show actual review counts and self-reported recall, not a proficiency score. Learning and review days both contribute to streak; the daily new-word goal still counts first saves only.
+
+Room v3 explicitly migrates older libraries; Flyway V8 adds cloud schedules and immutable answers. Each grade commits the schedule, history, session position and outbox entry in one local transaction. The server recomputes schedules and records answers atomically with its existing replay receipt. Across devices, server acceptance order determines review order; deleted words retain history and their schedule for a later resave. See [review behavior and algorithm](docs/spaced-review.md) and the [week 4 report](docs/portfolio/week4.md).
 
 ## Model provenance
 
@@ -218,5 +236,5 @@ The bundled EfficientDet-Lite0 INT8 model is pretrained for COCO and used throug
 1. Reproducible setup, auth fixes, CI and documentation — [week 1 report](docs/portfolio/week1.md).
 2. Persistent words per account, vocabulary API/cache, local learning statistics and real Text-to-Speech — [week 2 report](docs/portfolio/week2.md).
 3. Offline write queue, retry, idempotent sync and cloud library restoration — [week 3 report](docs/portfolio/week3.md).
-4. Spaced repetition, review scheduling and retention statistics.
+4. Offline spaced review, durable sessions, shared scheduling and review statistics — [week 4 report](docs/portfolio/week4.md).
 5. Physical-device benchmarks, demo video and release.

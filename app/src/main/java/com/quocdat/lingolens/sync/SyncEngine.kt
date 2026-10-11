@@ -53,6 +53,7 @@ class SyncEngine(private val db: LearningDatabase, private val api: SyncApi,
             if (db.syncDao().pending(accountId).isNotEmpty()) return@withLock SyncOutcome.RETRY
             if (!isSignedIn(accountId)) return@withLock SyncOutcome.PAUSED
             val snapshot = requireNotNull(api.snapshot(accountId, accountId).data)
+            val reviews = requireNotNull(api.reviews(accountId, accountId).data)
             if (!isSignedIn(accountId)) return@withLock SyncOutcome.PAUSED
             db.withTransaction {
                 // Local edits made while GET was in flight must win until acknowledged.
@@ -65,12 +66,17 @@ class SyncEngine(private val db: LearningDatabase, private val api: SyncApi,
                         val word = gson.fromJson(entry.content, LearnedWord::class.java)
                             .copy(id = entry.word, word = entry.word, timestamp = entry.savedAt, imagePath = null, audioPath = null)
                         db.learningDao().save(SavedWordEntity(accountId, entry.word, gson.toJson(word), entry.savedAt))
+                        db.reviewDao().initialize(ReviewCard(accountId, entry.word, entry.savedAt))
                     }
                     entry.firstLearnedAt?.let { time ->
                         val existing = db.learningDao().event(accountId, entry.word)
                         db.learningDao().mergeEvent(LearningEvent(accountId, entry.word, minOf(existing?.occurredAt ?: time, time)))
                     }
                 }
+                reviews.cards.filterNot { it.word in protected }.forEach {
+                    db.reviewDao().save(ReviewCard(accountId, it.word, it.dueAt, it.intervalDays, it.ease, it.repetitions, it.lapses, it.stage, it.lastReviewedAt))
+                }
+                reviews.events.forEach { db.reviewDao().record(ReviewEvent(it.id, accountId, it.word, it.grade, it.reviewedAt)) }
                 val meta = db.syncDao().account(accountId) ?: SyncAccount(accountId, true)
                 db.syncDao().saveAccount(meta.copy(lastSyncedAt = System.currentTimeMillis(), message = null))
             }

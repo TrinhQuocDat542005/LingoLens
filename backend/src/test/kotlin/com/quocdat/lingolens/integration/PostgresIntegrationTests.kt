@@ -35,9 +35,34 @@ class PostgresIntegrationTests {
     @Autowired lateinit var jdbc: JdbcTemplate
     @Autowired lateinit var mockMvc: MockMvc
     @Autowired lateinit var mapper: ObjectMapper
+    @Autowired lateinit var sync: com.quocdat.lingolens.sync.SyncService
+
+    @Test @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    fun `concurrent review retries advance PostgreSQL schedule once`() {
+        val email = "review-${UUID.randomUUID()}@lingolens.dev"
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsString(RegisterRequest(email, "Secure123!", "Review User")))).andExpect(status().isCreated)
+        val account = jdbc.queryForObject("SELECT id FROM users WHERE email = ?", Long::class.java, email)!!
+        val time = System.currentTimeMillis()
+        val content = """{"word":"book","translation":"sách","partOfSpeech":"Noun","definition":"A book","level":"A1","synonyms":[],"exampleSentence":"Read.","exampleSentenceB2":""}"""
+        sync.apply(com.quocdat.lingolens.sync.SyncOperation(account, UUID.randomUUID().toString(), "SAVE_WORD",
+            mapper.readTree("""{"word":"book","content":$content,"savedAt":$time,"firstLearnedAt":$time}""")), email)
+        val operation = com.quocdat.lingolens.sync.SyncOperation(account, UUID.randomUUID().toString(), "REVIEW_WORD",
+            mapper.readTree("""{"word":"book","grade":"GOOD","reviewedAt":$time}"""))
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        val start = java.util.concurrent.CountDownLatch(1)
+        try {
+            val requests = (1..2).map { executor.submit<String> { start.await(); sync.apply(operation, email).operationId } }
+            start.countDown()
+            requests.forEach { assertEquals(operation.operationId, it.get(30, java.util.concurrent.TimeUnit.SECONDS)) }
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM review_events WHERE user_id = ?", Int::class.java, account)!!)
+            assertEquals(1, jdbc.queryForObject("SELECT repetitions FROM review_cards WHERE user_id = ?", Int::class.java, account)!!)
+            assertEquals(time + 86400000L, jdbc.queryForObject("SELECT due_at FROM review_cards WHERE user_id = ?", Long::class.java, account))
+        } finally { executor.shutdownNow() }
+    }
 
     @Test fun `all migrations apply and seed vocabulary on PostgreSQL`() {
-        assertEquals(7, jdbc.queryForObject(
+        assertEquals(8, jdbc.queryForObject(
             "SELECT COUNT(*) FROM flyway_schema_history WHERE success = TRUE AND type = 'SQL'", Int::class.java)!!)
         assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM roles", Int::class.java)!!)
         assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM vocabularies WHERE is_published = TRUE", Int::class.java)!! > 0)

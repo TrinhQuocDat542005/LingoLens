@@ -34,10 +34,15 @@ Response: `data.operationId` and nullable `data.remoteId`. Account ID is a consi
 | `RECORD_LEARNING` | `word`, epoch-ms `firstLearnedAt` | Import historical first-learning date without restoring a deleted word |
 | `RECOGNITION` | `detectedLabel`, `confidence`, `engine` | Create one recognition history row |
 | `REPORT` | `recognitionOperationId`, `expectedLabel`, optional `note` | Resolve an owned recognition receipt and submit one correction |
+| `REVIEW_WORD` | `word`, `grade` (`AGAIN`, `HARD`, `GOOD`, `EASY`), integer epoch-ms `reviewedAt` | Compute schedule with shared Kotlin code; append one immutable answer |
 
 `GET /api/v1/sync/learning?accountId=123` returns `data` as an array of `{word, content, savedAt, firstLearnedAt, deleted}`. `content` is a JSON string containing a personal vocabulary snapshot, not shared/published catalog content. Tombstones and historical first-learning dates are included.
 
 ## Server invariants
+
+`GET /api/v1/sync/reviews?accountId=123` returns `data.cards` (word, dueAt, intervalDays, ease, repetitions, lapses, stage, lastReviewedAt) and `data.events` (id, word, grade, reviewedAt). The client downloads learning and review snapshots before its Room merge transaction, protects words with newly queued operations, and deduplicates review events by their operation UUID. Local session cursors are not uploaded. Room migration 2 → 3 initializes cards for existing saved words; Flyway V8 backfills cloud cards.
+
+Review operations require an existing owned learning entry. A deleted entry can receive delayed offline review history without restoring library presence. Per-account write locking serializes review effects across devices; acceptance order determines the next schedule. The schedule anchor is the maximum of this review timestamp and the prior accepted review timestamp, preventing a backwards device clock from moving its anchor backwards. Review history is retained with tombstones and receipts.
 
 - Expected account must equal the authenticated database user. Authentication still enforces disabled-user status.
 - Account mutation transactions lock the user row. Effect and receipt either both commit or both roll back.

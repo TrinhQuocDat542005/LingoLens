@@ -20,10 +20,12 @@ class AppContainer(context: Context) {
     suspend fun resumeStoredSync() { storage.cachedProfile()?.id?.let(syncScheduler::resume) }
     private val learningDatabase = androidx.room.Room.databaseBuilder(context.applicationContext,
         com.quocdat.lingolens.data.local.LearningDatabase::class.java, "learning.db")
-        .addMigrations(com.quocdat.lingolens.data.local.LearningDatabase.MIGRATION_1_2).build()
+        .addMigrations(com.quocdat.lingolens.data.local.LearningDatabase.MIGRATION_1_2,
+            com.quocdat.lingolens.data.local.LearningDatabase.MIGRATION_2_3).build()
     val syncScheduler = com.quocdat.lingolens.sync.SyncScheduler(context)
     val learningRepository = com.quocdat.lingolens.data.repository.LearningRepository(learningDatabase, onCommitted = syncScheduler::schedule)
     val syncDatabase get() = learningDatabase
+    val reviewRepository = com.quocdat.lingolens.data.repository.ReviewRepository(learningDatabase, scheduleSync = syncScheduler::schedule)
     private val gson = Gson()
     private val storage = SessionStorage(context)
     private val baseUrl = BuildConfig.API_BASE_URL

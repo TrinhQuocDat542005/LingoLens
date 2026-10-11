@@ -45,7 +45,9 @@ fun HomeScreen(navController: NavController) {
     val words by remember(session.profile.id) { repository.words(session.profile.id) }.collectAsState(initial = emptyList())
     val events by remember(session.profile.id) { repository.events(session.profile.id) }.collectAsState(initial = emptyList())
     val stats = LearningStats.calculate(events)
-    val user = User(session.profile.name, session.profile.targetLevel, stats.streak, words.size, session.profile.dailyGoal)
+    val reviews by remember(session.profile.id) { session.container.reviewRepository.events(session.profile.id) }.collectAsState(initial = emptyList())
+    val activity = LearningStats.calculate(events + reviews.map { com.quocdat.lingolens.data.local.LearningEvent(session.profile.id, it.id, it.reviewedAt) })
+    val user = User(session.profile.name, session.profile.targetLevel, activity.streak, words.size, session.profile.dailyGoal)
     val scope = rememberCoroutineScope()
     var catalogMessage by remember { androidx.compose.runtime.mutableStateOf("Đang tải kho từ…") }
     var refreshing by remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -88,6 +90,7 @@ fun HomeScreen(navController: NavController) {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            item { com.quocdat.lingolens.ui.learning.ReviewOverviewCard(navController) }
             // Welcome Header
             item {
                 Card(Modifier.fillMaxWidth()) {

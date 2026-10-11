@@ -65,6 +65,7 @@ android {
     }
     testOptions { unitTests.isIncludeAndroidResources = true }
     sourceSets.getByName("test").resources.srcDir("schemas")
+    sourceSets.getByName("main").kotlin.directories.add("../shared/src/main/kotlin")
 }
 
 room { schemaDirectory("$projectDir/schemas") }
