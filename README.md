@@ -4,13 +4,15 @@
 
 [![CI](https://github.com/TrinhQuocDat542005/LingoLens/actions/workflows/ci.yml/badge.svg)](https://github.com/TrinhQuocDat542005/LingoLens/actions/workflows/ci.yml)
 
-LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin console. Follow a three-lesson stage, study vocabulary, answer meaning questions and earn server-confirmed XP. Capture everyday objects, select a detected bounding box and explore English vocabulary. Images are processed on the phone and are not uploaded to the API.
+LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin console. Follow a three-lesson stage, study vocabulary, answer meaning, listening and fill-in questions, and earn server-confirmed XP. Capture everyday objects, select a detected bounding box and explore English vocabulary. Images are processed on the phone and are not uploaded to the API.
 
-**Branch status:** week 5 code was merged in PR #2 (`e1da7b7`). Week 6 steps 0–7 are on `feature/offline-lessons`, with the technical regression gate passed and device-dependent criteria explicitly marked partial; they are not merged into main. See the [week 6 acceptance matrix](docs/portfolio/week6-step7.md) and [installation, database backup and manual test guide](docs/product/week6-testing.md). All three lessons use **dev/test DEMO content**, rejected in production; independent content review is required before week 8.
+**Branch status (13 October 2026):** week 5 code was merged in PR #2 (`e1da7b7`). Week 6 is in open [PR #4](https://github.com/TrinhQuocDat542005/LingoLens/pull/4), not merged. Week 7 is on `feature/question-types-tts`, based on the week 6 branch: all technical regression gates passed, with device-dependent criteria explicitly partial. See the [week 6 acceptance matrix](docs/portfolio/week6-step7.md), [week 7 evidence and limits](docs/portfolio/week7-step3.md), and [installation, database backup and manual test guide](docs/product/week7-testing.md). All three lessons use **dev/test DEMO content**, rejected in production; independent content review is required before week 8.
 
 ## Implemented features
 
-- Three guided lessons with vocabulary snapshots, sentence patterns, meaning questions and correct/total results.
+- Three guided lessons with vocabulary snapshots, sentence patterns, meaning/listening/fill-in questions and correct/total results.
+- Shared question feedback and explanations, limited fill matching against approved variants, and local wrong-answer retry that preserves the submitted result and XP.
+- Lesson TTS chooses actual en-US Voice properties, prioritizes offline voices, and offers an explicit nonaudio alternative without changing the question or score denominator.
 - Server grading with an integer weighted 70% threshold, one-time lesson XP and idempotent attempt UUIDs.
 - Authenticated content packs with schema/size/SHA-256 checks; a stage becomes usable after all three packs are complete.
 - Account-scoped Room v4 lesson sessions, answers and immutable attempt queues. Offline progress is provisional; official progress and XP come from server confirmation.
@@ -45,7 +47,7 @@ LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin con
 8. Sign in with the same account on another installation and sync to restore the saved library and first-learning history.
 9. Edit/publish vocabulary in the admin console, use **Refresh content** on the result screen and see the revised content.
 
-For guided lessons, seed the DEMO pack explicitly and open **Home → Mở bài học → Tải chặng**. Study all three lessons offline, then reconnect for server confirmation. See [week 6 testing](docs/product/week6-testing.md) for backend/ADB commands and interruption, upgrade and account-switch scenarios. Real device process-death/reboot acceptance is pending; PRACTICE has backend support and no UI.
+For guided lessons on the week 7 branch, import the new DEMO explicitly with `seedDemo -PseedFile=src/main/resources/content/demo-week7.json`, then open **Home → Mở bài học → Tải chặng** (or check for new content). Existing sessions stay pinned to their old revision. Study all three lessons offline, then reconnect for server confirmation. See [week 7 testing](docs/product/week7-testing.md) for backend/ADB commands, backup, TTS, interruption, upgrade and account-switch scenarios. Real-device TTS/process-death/reboot acceptance is pending; PRACTICE has backend support and no UI.
 
 On-device processing keeps captured images off the server. Saved snapshots contain vocabulary text; temporary image paths are not persisted in the library.
 
@@ -252,5 +254,6 @@ The bundled EfficientDet-Lite0 INT8 model is pretrained for COCO and used throug
 4. Offline spaced review, durable sessions, shared scheduling and review statistics — [week 4 report](docs/portfolio/week4.md).
 5. Guided learning backend, compatible learner settings and one-time lesson XP — week 5 code merged in PR #2 (`e1da7b7`).
 6. Three-lesson offline UI, durable packs/sessions/attempt sync — [week 6 acceptance matrix](docs/portfolio/week6-step7.md), technical gate passed on the feature branch; device checks remain partial and changes await PR review.
+7. Three question types, shared grading/feedback and en-US TTS with explicit fallback — [week 7 technical evidence](docs/portfolio/week7-step3.md); 126 Android, 37 backend unit and 52 PostgreSQL tests pass, lint remains at 38 baseline warnings. Device/audio checks and reviewed content remain pending.
 
 The [approved v2 specification and weeks 5–9 plan](docs/product/lingolens-spec-v2.md) also includes account deletion and privacy preparation before release. Those later milestones are still planned work.
