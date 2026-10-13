@@ -27,6 +27,12 @@ class JwtService(
         return extractClaim(token, Claims::getSubject)
     }
 
+    fun extractUserId(token: String): Long {
+        val value = extractClaim(token) { it["userId"] }
+        require(value is Int || value is Long) { "JWT userId must be an integer" }
+        return (value as Number).toLong().also { require(it > 0) { "JWT userId must be positive" } }
+    }
+
     fun <T> extractClaim(token: String, claimsResolver: (Claims) -> T): T {
         val claims = extractAllClaims(token)
         return claimsResolver(claims)
@@ -37,10 +43,13 @@ class JwtService(
     }
 
     fun generateToken(extraClaims: Map<String, Any>, userDetails: UserDetails): String {
+        require(userDetails is User && userDetails.id != null && userDetails.id!! > 0) { "Persisted user identity required" }
         val claimsBuilder = Jwts.claims().subject(userDetails.username)
         extraClaims.forEach { (key, value) -> claimsBuilder.add(key, value) }
         
         if (userDetails is User) {
+            // Identity is authoritative, never supplied by extraClaims or derived from an email.
+            claimsBuilder.add("userId", userDetails.id!!)
             claimsBuilder.add("roles", userDetails.roles.map { it.name })
             claimsBuilder.add("name", userDetails.getName())
         }
@@ -55,7 +64,8 @@ class JwtService(
 
     fun isTokenValid(token: String, userDetails: UserDetails): Boolean {
         val username = extractUsername(token)
-        return (username == userDetails.username) && !isTokenExpired(token)
+        return userDetails is User && extractUserId(token) == userDetails.id &&
+            (username == userDetails.username) && !isTokenExpired(token)
     }
 
     private fun isTokenExpired(token: String): Boolean {

@@ -59,6 +59,20 @@ class SyncEngineTest {
         }
     }
     private fun engine(api: SyncApi) = SyncEngine(db, api, { it == signedIn })
+    @Test fun `reregistered email with a new account ID never adopts old word and review queue`() = runBlocking {
+        learning.save(1,word(),1000)
+        db.syncDao().enqueue(OutboxOperation(operationId=UUID.randomUUID().toString(),accountId=1,kind="REVIEW_WORD",
+            payload="""{"word":"book","grade":"GOOD","reviewedAt":2000}"""))
+        val before=db.syncDao().pending(1);val words=db.learningDao().allWords(1);val events=db.learningDao().allEvents(1)
+        val api=FakeApi()
+        // Backend PostgreSQL tests recreate the actual email. Here IDs1/2 model the two identities.
+        signedIn=0;assertEquals(SyncOutcome.PAUSED,engine(api).run(1))
+        signedIn=2;db.syncDao().saveAccount(SyncAccount(2,true))
+        assertEquals(SyncOutcome.PAUSED,engine(api).run(1));assertEquals(SyncOutcome.COMPLETE,engine(api).run(2))
+        assertTrue(api.calls.isEmpty());assertEquals(before,db.syncDao().pending(1));assertTrue(db.syncDao().pending(2).isEmpty())
+        assertEquals(words,db.learningDao().allWords(1));assertEquals(events,db.learningDao().allEvents(1))
+        assertTrue(db.learningDao().allWords(2).isEmpty());assertTrue(db.learningDao().allEvents(2).isEmpty())
+    }
     @Test fun `review pull restores schedule and deduplicates history`() = runBlocking {
         val api = FakeApi().apply {
             snapshot = listOf(CloudEntry("book", gson.toJson(word()), 100, 100, false))

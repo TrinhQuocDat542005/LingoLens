@@ -171,7 +171,9 @@ class PostgresIntegrationTests {
     @Test fun `all migrations apply and seed vocabulary on PostgreSQL`() {
         MigrationChecksums.assertCommittedSourcesUnchanged()
         org.flywaydb.core.Flyway.configure().dataSource(jdbc.dataSource!!).load().validate()
-        assertEquals((1..13).map(Int::toString),jdbc.queryForList("SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank",String::class.java))
+        assertEquals((1..13).map(Int::toString)+"14",jdbc.queryForList("SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank",String::class.java))
+        com.quocdat.lingolens.auth.IdentityTokenRolloutMigrationTests.assertRolloutSourceUnchanged()
+        assertTrue(jdbc.queryForObject("SELECT checksum IS NOT NULL FROM flyway_schema_history WHERE version='14' AND success",Boolean::class.java)!!)
         assertTrue(jdbc.queryForObject("SELECT checksum IS NOT NULL FROM flyway_schema_history WHERE version='13' AND success",Boolean::class.java)!!)
         assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM roles", Int::class.java)!!)
         assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM vocabularies WHERE is_published = TRUE", Int::class.java)!! > 0)

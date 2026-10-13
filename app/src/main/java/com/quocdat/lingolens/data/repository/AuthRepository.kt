@@ -26,14 +26,15 @@ class AuthRepository(
         val tokens = authApi.login(LoginRequest(email.trim(), password)).data
             ?: throw ApiException("EMPTY_RESPONSE", "Máy chủ không trả về phiên đăng nhập.")
         storage.save(tokens)
-        (userApi.getMe().data ?: throw ApiException("EMPTY_PROFILE", "Không tải được hồ sơ người dùng.")).also { storage.saveProfile(it) }
+        val expected = requireNotNull(storage.current())
+        (userApi.getMe().data ?: throw ApiException("EMPTY_PROFILE", "Không tải được hồ sơ người dùng.")).also { storage.saveProfile(it, expected) }
     }
 
     suspend fun restoreSession(): Result<UserProfileDto?> {
-        if (storage.current() == null) return Result.success(null)
+        val expected = storage.current() ?: return Result.success(null)
         return try {
             val profile = userApi.getMe().data ?: throw ApiException("EMPTY_PROFILE", "Không tải được hồ sơ.")
-            storage.saveProfile(profile)
+            storage.saveProfile(profile, expected)
             Result.success(profile)
         } catch (ex: kotlinx.coroutines.CancellationException) { throw ex
         } catch (ex: retrofit2.HttpException) {
@@ -49,8 +50,9 @@ class AuthRepository(
     }
 
     suspend fun updateProfile(name: String, level: String, dailyGoal: Int): Result<UserProfileDto> = apiCall {
+        val expected = requireNotNull(storage.current())
         (userApi.updateMe(UpdateProfileRequest(name, level, dailyGoal)).data
-            ?: throw ApiException("EMPTY_PROFILE", "Không tải được hồ sơ.")).also { storage.saveProfile(it) }
+            ?: throw ApiException("EMPTY_PROFILE", "Không tải được hồ sơ.")).also { storage.saveProfile(it, expected) }
     }
 
     suspend fun logout(): Result<Unit> {

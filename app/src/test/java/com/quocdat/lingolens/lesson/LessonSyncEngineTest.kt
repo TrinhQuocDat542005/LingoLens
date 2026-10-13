@@ -126,6 +126,15 @@ class LessonSyncEngineTest {
         assertEquals(before,db.lessonDao().outbox(1,session.id));assertNull(db.lessonDao().session(2,session.id))
         signedIn=1;assertEquals(SyncOutcome.COMPLETE,engine.run(1));assertEquals(1,calls.size)
     }
+    @Test fun `new identity after email recreation cannot adopt old frozen attempt UUID or payload`()=runBlocking {
+        val session=enqueue(0);val oldQueue=db.lessonDao().outbox(1,session.id);val oldSession=db.lessonDao().session(1,session.id)
+        signedIn=0;assertEquals(SyncOutcome.PAUSED,engine.run(1))
+        signedIn=2;assertEquals(SyncOutcome.PAUSED,engine.run(1));assertEquals(SyncOutcome.COMPLETE,engine.run(2))
+        assertTrue(calls.isEmpty());assertTrue(server.isEmpty())
+        assertEquals(oldQueue,db.lessonDao().outbox(1,session.id));assertEquals(oldSession,db.lessonDao().session(1,session.id))
+        assertNull(db.lessonDao().session(2,session.id));assertTrue(db.lessonDao().pending(2).isEmpty())
+        assertEquals(0,db.lessonDao().curriculum(2,packs[0].courseId)!!.confirmedXpTotal)
+    }
     @Test fun `unexpected acknowledgement never confirms another UUID`()=runBlocking {
         val session=enqueue(0);wrongResponse=true
         assertEquals(SyncOutcome.RETRY,engine.run(1));assertEquals("PENDING",db.lessonDao().outbox(1,session.id)?.state);assertNull(db.lessonDao().session(1,session.id)?.serverResultJson)
