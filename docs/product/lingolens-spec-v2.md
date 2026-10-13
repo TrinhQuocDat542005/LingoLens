@@ -1,6 +1,6 @@
 # LingoLens — Đặc tả sản phẩm và kiến trúc v2
 
-**Trạng thái cập nhật 13/10/2026:** tuần 6 đạt gate kỹ thuật bước 7, PR #4 đang mở và chưa merge; bằng chứng thiết bị vẫn đạt một phần. Chủ dự án cho tiếp tục tuần 7 trên nhánh feature/question-types-tts theo mục 15; test fail/lint tăng hoặc hợp đồng cần đổi thì dừng. Không tự làm tuần 8–9.
+**Trạng thái cập nhật 13/10/2026:** tuần7 được duyệt báo cáo, branch đã push, chưa mở PR; PR#4 giữ mở/chưa merge. Chủ dự án duyệt kế hoạch tuần8 với điều chỉnh tại mục16: làm JWT trước rồi dừng báo cáo, chờ tiếp tục. Không tự làm tuần9 hoặc mở/merge PR.
 
 **Căn cứ:** đặc tả ban đầu trong cuộc trò chuyện, đối chiếu migration V1–V8, Room v3 và quyết định **1A, 2A, 3A, 4A, 5A, 6A**, cùng các bổ sung của chủ dự án. Tài liệu này là đặc tả đích, không phải báo cáo tính năng đã triển khai.
 
@@ -340,7 +340,7 @@ Offline (từ tuần 6, chưa triển khai tuần 5) hiển thị điểm/tiến
 | Timestamp do client khai báo | Giữ riêng với received_at; không coi là trusted clock |
 | TIMESTAMP legacy | Giữ kiểu hiện tại; chỉ chuyển sau kiểm tra timezone ghi thực tế; không đoán offset để backfill |
 | Streak/biểu đồ học hiện tại | Local calendar theo ZoneId.systemDefault(); giữ hành vi cũ, ghi rõ khác thiết bị có thể khác ngày |
-| D1/D7 analytics | Timezone tại app_open đầu tiên của tài khoản đã opt-in, cố định cho cohort đó |
+| D1/D7 analytics | **[THAY ĐỔI ĐÃ DUYỆT TUẦN8]** Truy vấn trực tiếp app_open còn trong cửa sổ90 ngày; không cohort/anchor/marker/timezone cố định. Quy ước query và giới hạn nêu tại mục16 |
 | Tuần cạnh tranh sau MVP | Thứ Hai 00:00 UTC; đầu bao gồm, cuối không bao gồm; chưa triển khai tuần 5–9 |
 | Lịch ôn | Một ngày = 86.400.000 ms, giữ thuật toán chung; không là nửa đêm lịch |
 
@@ -357,7 +357,7 @@ Opt-in tách khỏi auth và điều kiện dùng app. Không opt-in vẫn học
 | lesson_completed | Android | Trả lời đủ bài tại máy; không phải xác nhận kết quả |
 | lesson_passed | Backend | Attempt LESSON đạt ≥70%; dùng cùng định danh nghiệp vụ để dedupe |
 | review_session_completed | Android | Phiên kết thúc và có ít nhất một lượt ôn thực |
-| D1/D7 | Truy vấn tổng hợp | Có app_open ngày +1/+7 so với lần đầu, theo timezone cohort cố định; chỉ cohort đủ thời gian quan sát |
+| D1/D7 | Truy vấn trực tiếp | **[THAY ĐỔI TUẦN8]** app_open ngày+1/+7 so với lần mở sớm nhất còn trong cửa sổ90 ngày; không cohort/anchor/marker/timezone cố định; ghi giới hạn cửa sổ và chỉ tính mẫu đủ ngày quan sát |
 
 | Field của analytics_events | Data Type | Constraints |
 | --- | --- | --- |
@@ -379,6 +379,8 @@ Hàng đợi Room riêng → endpoint batch → PostgreSQL. Analytics lỗi khô
 **Retention:** raw events hết hạn sau 90 ngày từ received_at; không nhận lịch sử analytics cũ hơn 90 ngày theo timestamp hợp lệ; dọn ít nhất mỗi ngày để dữ liệu hết hạn không còn phục vụ báo cáo. Queue Android cũng có hạn, không khôi phục telemetry cũ sau opt-in. Opt-out dừng sự kiện mới, bỏ queue chưa gửi; raw đã gửi tiếp tục theo hạn 90 ngày, trừ yêu cầu xóa riêng/xóa tài khoản. Không tạo kho aggregate lưu vô hạn trong MVP. Backup retention là hạng mục phải chốt trước release, không coi dọn database là đã xóa mọi backup.
 
 Báo cáo tối thiểu: start→complete, complete→pass, số lần thử đến khi đạt, tỷ lệ phiên ôn hoàn thành, D1/D7 và số tài khoản trong mẫu opt-in. Không đặt tỷ lệ thành công bịa sẵn; dùng baseline sau có dữ liệu. Không suy ra nhân quả giữa XP/ôn và retention từ tương quan.
+
+**[THAY ĐỔI ĐÃ DUYỆT TUẦN8]** D1/D7 dùng app_open còn trong cửa sổ90 ngày: lần mở sớm nhất còn quan sát là mốc truy vấn ngày+1/+7, không lưu cohort/marker/anchor/timezone cố định. Không gọi chỉ số này là retention lifetime/new-user cohort; consent muộn, dữ liệu hết hạn, clock/timezone/offline và tài khoản cũ quay lại có thể lệch mẫu. Query cụ thể phải có test biên và tài liệu giới hạn trước triển khai; không dùng chỉ số để đổi XP/streak/review scheduler.
 
 ## 7. [BỔ SUNG] TTS và chuẩn phát âm
 
@@ -650,3 +652,11 @@ Mỗi bước một commit trên nhánh riêng, test quan trọng viết trướ
 ## 15. [BỔ SUNG — TUẦN 7] Ba dạng bài và TTS/fallback
 
 Chủ dự án cho thực hiện liên tục tuần 7 sau gate/PR tuần 6, không merge. Hợp đồng, các bước nhỏ, rủi ro và **Giả định chờ chủ dự án xác nhận** tại [week7-plan.md](week7-plan.md). Phạm vi chỉ MEANING_CHOICE/LISTEN_CHOICE/FILL_GAP, TTS en-US theo thuộc tính Voice, fallback cùng câu và phản hồi/luyện câu sai; không PRACTICE UI hoặc việc tuần 8–9. Nội dung mới trọng số bằng nhau/10 câu, tối đa hai câu nghe mỗi bài; shared grader/vectors mở rộng nhưng giữ revision/vector/queue cũ. Không sửa V1–V13/schema Room v1–v4; kế hoạch hiện không cần migration hoặc thư viện/dịch vụ mới.
+
+## 16. [BỔ SUNG ĐÃ DUYỆT — TUẦN8] JWT trước, analytics/Room/topic sau
+
+Chủ dự án chọn1A/2A/3A/4A/5A/6B và các điều chỉnh tại [week8-approved-contracts.md](week8-approved-contracts.md), thay đề xuất tương ứng trong week8-plan-draft.md. Bước JWT trên branch mới từ tuần7: stable userId claim, legacy access bị từ chối; refresh opaque giữ FK/hash nhưng thu hồi trước rollout bằng migrationV14 một lần để login lại. Tests rộng auth/profile/roles/sync/curriculum/pack, deleted identity/reregister sameemail, queue không chuyển identity; toàn bộ regression/lint38/builds đạt mới commit và dừng chờ chủ dự án.
+
+Sau checkpoint: schema analytics/consent/batch→Roomv5→camera–topic→báo cáo/dừng. REVIEWED import chỉ làm khi chủ dự án cung cấp người soạn, người duyệt khác, ngày duyệt/checksum/biên bản; chưa có thì bỏ qua bước1, giữ DEMO là DEMO và production guard, cho phép công việc độc lập tiến hành. Điều chỉnh này thay gate thời điểm trước tuần8 đã ghi ở các mục lịch sử; không bỏ gate REVIEWED trước release. Analytics là phần cắt đầu tiên nếu thời gian căng và phải báo phần chưa làm.
+
+Retention backup7/log7/statusreceipt7/restoremanifest8 ngày là đề xuất chờ xác nhận hosting, không cam kết. Web deletion phải có liên hệ thủ công cho người quên password: **[CHỜ CHỦ DỰ ÁN CUNG CẤP ĐỊA CHỈ THƯ]**, không bịa reset/email provider. Không sửaV1–V13/Roomexports1–4, destructive fallback, thêmlibrary/service hoặc merge main/mởPRtuần7. Full deletion tuần9; bướcJWT chỉ kiểm physical deletion bằng fixture test.

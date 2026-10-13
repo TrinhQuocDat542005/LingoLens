@@ -1,0 +1,5 @@
+{
+  "path": "backend/src/main/resources/db/migration/V14__revoke_legacy_refresh_tokens.sql",
+  "purpose": "One-time legacy refresh revocation; only revoked_at changes",
+  "sha256Lf": "1942d0a28b4f749bfc6df201d9d123924f7276954b6b586c64467ef2999d87e2"
+}

@@ -11,16 +11,17 @@ import kotlinx.coroutines.flow.map
 
 private val Context.sessionDataStore by preferencesDataStore("secure_session")
 
-data class StoredSession(val accessToken: String, val refreshToken: String, val email: String, val name: String)
+data class StoredSession(val accessToken: String, val refreshToken: String, val email: String, val name: String,
+    val generation: String? = null)
 
-class SessionStorage(private val context: Context) : CredentialStore {
-    private val cipher = TokenCipher()
+class SessionStorage(private val context: Context, private val cipher: SessionTokenCipher = TokenCipher()) : CredentialStore {
     private object Keys {
         val access = stringPreferencesKey("access_token")
         val refresh = stringPreferencesKey("refresh_token")
         val email = stringPreferencesKey("user_email")
         val name = stringPreferencesKey("user_name")
         val profile = stringPreferencesKey("cached_profile")
+        val generation = stringPreferencesKey("login_generation")
     }
 
     val session: Flow<StoredSession?> = context.sessionDataStore.data.map { prefs ->
@@ -30,7 +31,8 @@ class SessionStorage(private val context: Context) : CredentialStore {
             accessToken = access,
             refreshToken = refresh,
             email = prefs[Keys.email].orEmpty(),
-            name = prefs[Keys.name].orEmpty()
+            name = prefs[Keys.name].orEmpty(),
+            generation = prefs[Keys.generation]
         )
     }
 
@@ -38,7 +40,9 @@ class SessionStorage(private val context: Context) : CredentialStore {
 
     suspend fun save(tokens: TokenDto) {
         context.sessionDataStore.edit {
-            if (it[Keys.email] != tokens.email) it.remove(Keys.profile)
+            // A new login may be a new identity even when the email is unchanged.
+            it.remove(Keys.profile)
+            it[Keys.generation] = java.util.UUID.randomUUID().toString()
             it[Keys.access] = cipher.encrypt(tokens.accessToken)
             it[Keys.refresh] = cipher.encrypt(tokens.refreshToken)
             it[Keys.email] = tokens.email
@@ -46,9 +50,11 @@ class SessionStorage(private val context: Context) : CredentialStore {
         }
     }
 
-    suspend fun saveProfile(profile: com.quocdat.lingolens.data.remote.dto.UserProfileDto) {
+    suspend fun saveProfile(profile: com.quocdat.lingolens.data.remote.dto.UserProfileDto, expected: StoredSession) {
         context.sessionDataStore.edit {
-            if (it[Keys.email] == profile.email) it[Keys.profile] = com.google.gson.Gson().toJson(profile)
+            // Refresh keeps the generation; a stale response from a prior login cannot overwrite it.
+            if (it[Keys.email] == profile.email && it[Keys.email] == expected.email &&
+                it[Keys.generation] == expected.generation) it[Keys.profile] = com.google.gson.Gson().toJson(profile)
         }
     }
 

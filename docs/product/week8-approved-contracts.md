@@ -1,0 +1,15 @@
+# Tuần 8 — hợp đồng đã duyệt và thứ tự thực hiện
+
+Chủ dự án duyệt 1A/2A/3A/4A/5A/6B, điều chỉnh sau bản week8-plan-draft.md. Tài liệu này thay những đề xuất tương ứng trong bản nháp; không coi nháp là hợp đồng đã duyệt.
+
+- Nhánh mới từ feature/question-types-tts; không merge main/PR#4, không mở PR tuần7 cho đến khi chủ dự án yêu cầu.
+- Bước JWT làm trước và dừng báo cáo sau gate/commit, chờ chủ dự án tiếp tục. Thêm stable userId claim, filter gắn đúng user ID; legacy access không có claim bị từ chối, người dùng login lại một lần. Refresh token giữ dạng opaque/hash/FK; migration mới thu hồi các refresh tokens trước rollout một lần, không xóa rows hoặc dữ liệu học. Login mới/rotation/logout bình thường phải giữ hoạt động.
+- Android phải bỏ cached profile trước khi lưu token từ lần login mới, kể cả cùng email. Refresh hợp lệ vẫn giữ profile; queue chỉ theo account ID, không chuyển queue khi tái đăng ký email. Không xóa queue cũ trong bước JWT; full deletion ở tuần9.
+- Thứ tự sau JWT: schema analytics/consent/batch → Roomv5 → camera–chủ đề → báo cáo/dừng. REVIEWED import là bước1 riêng chỉ thực hiện khi chủ dự án cung cấp người soạn, người duyệt khác, ngày duyệt và checksum/biên bản. Chưa có thì bỏ qua, ghi chưa làm; không relabel DEMO. Điều chỉnh này cho phép các bước độc lập tiếp tục dù chưa có biên bản REVIEWED.
+- Analytics là phần cắt đầu tiên nếu thời gian căng; phải báo phạm vi đã cắt, không nhận hoàn thành cho phần chưa làm.
+- D1/D7 tính trực tiếp từ app_open còn trong cửa sổ90 ngày, không cohort cố định, marker, anchor/timezone cố định. Chỉ đo quay lại ngày+1/+7 từ lần mở sớm nhất còn quan sát; không gọi là retention lifetime/new-user cohort. Sự kiện hết hạn, consent muộn, clock/timezone khác và người cũ quay lại có thể lệch mẫu; phải ghi giới hạn, không dùng kết quả để đổi XP/review rules.
+- Retention backup7/log7/deletion receipt7/restore manifest8 ngày chỉ là đề xuất chờ xác nhận hosting, không cam kết hoặc công bố như đã triển khai. Raw analytics90 ngày vẫn theo đặc tả. Website deletion có mục liên hệ thủ công khi quên mật khẩu, địa chỉ thư **[CHỜ CHỦ DỰ ÁN CUNG CẤP]**, không bịa reset/email provider.
+- Camera–topic mức tối thiểu: Đồ vật + book/bottle/phone, mapping duyệt; không sửa scheduler/chụp ảnh/model, không XP từ save.
+- Mỗi bước một commit, test viết trước; đủ Android/backend/postgresTest/lint38/admin build/APK. Không sửa V1–V13/Room schemas1–4, destructive fallback hoặc thêm thư viện/dịch vụ. Số migration chốt khi viết; JWT dự kiến V14 vì HEAD chỉ tớiV13. Migration V14 chỉ thu hồi refresh cũ theo yêu cầu đăng nhập lại; mọi row/field khác giữ nguyên. Test snapshot PostgreSQL bảo vệ sự khác biệt có chủ đích này.
+
+Bước JWT không tạo endpoint xóa account. PostgreSQL test dùng fixture xóa đúng account để kiểm old access/refresh và đăng ký lại cùng email; đó không là bằng chứng luồng deletion production đã triển khai. Hồi quy auth/profile/roles/curriculum/pack/sync/recognition và isolation phải chạy trước commit. Legacy checksums và export Room giữ nguyên; thu hồi refresh là thay đổi rollout có chủ đích, không sửa SQL khóa production để H2 chạy.

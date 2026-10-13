@@ -28,10 +28,10 @@ class JwtAuthenticationFilter(
         }
         try{
             val jwt = authHeader.substring(7)
-            val userEmail = jwtService.extractUsername(jwt)
+            val userId = jwtService.extractUserId(jwt)
 
             if (SecurityContextHolder.getContext().authentication == null) {
-                val userDetailsOpt = userRepository.findByEmail(userEmail)
+                val userDetailsOpt = userRepository.findById(userId)
                 if (userDetailsOpt.isPresent) {
                     val userDetails = userDetailsOpt.get()
                     if (!userDetails.isEnabled) {
@@ -45,7 +45,13 @@ class JwtAuthenticationFilter(
                         )
                         authToken.details = WebAuthenticationDetailsSource().buildDetails(request)
                         SecurityContextHolder.getContext().authentication = authToken
+                    } else {
+                        request.setAttribute("exception_code", "INVALID_TOKEN")
+                        request.setAttribute("exception_message", "JWT identity does not match the current account")
                     }
+                } else {
+                    request.setAttribute("exception_code", "INVALID_TOKEN")
+                    request.setAttribute("exception_message", "JWT account no longer exists")
                 }
             }
         } catch (ex: io.jsonwebtoken.ExpiredJwtException) {
