@@ -59,6 +59,7 @@ class LessonService(private val jdbc: JdbcTemplate, private val mapper: ObjectMa
     @Transactional
     fun submit(account: Long, request: SubmitLessonRequest): AttemptResult {
         checkRequest(request.mode in setOf("LESSON","PRACTICE"),"Invalid lesson mode")
+        checkRequest(request.answers.all { it.optionKey.length <= 500 },"Answer exceeds 500 characters")
         checkRequest(request.clientCompletedAt>0 && request.clientCompletedAt<=System.currentTimeMillis()+86_400_000,"Invalid client timestamp")
         lockAccount(account)
         // Cross-account UUID races are also serialized; no result ownership is leaked.
@@ -82,9 +83,11 @@ class LessonService(private val jdbc: JdbcTemplate, private val mapper: ObjectMa
         val row=revisionRow(request.lessonRevisionId)
         requireEnrollment(account,row)
         val confirmed=request.mode=="PRACTICE" || prerequisitesMet(account,row)
-        val questions=jdbc.queryForList("SELECT id,weight,answer_key::text FROM questions WHERE lesson_revision_id=? ORDER BY position",request.lessonRevisionId).map {
-            val id=it["id"] as UUID
-            GradingQuestion(id,(it["weight"] as Number).toInt(),jdbc.queryForList("SELECT option_key FROM question_options WHERE question_id=?",String::class.java,id).toSet(),mapper.readTree(it["answer_key"].toString())["optionKey"].asText())
+        val questions=jdbc.queryForList("SELECT id,type,weight,answer_key::text FROM questions WHERE lesson_revision_id=? ORDER BY position",request.lessonRevisionId).map {
+            val id=it["id"] as UUID;val type=it["type"].toString();val key=mapper.readTree(it["answer_key"].toString())
+            GradingQuestion(id,(it["weight"] as Number).toInt(),jdbc.queryForList("SELECT option_key FROM question_options WHERE question_id=?",String::class.java,id).toSet(),
+                if(type=="FILL_GAP") "" else key["optionKey"].asText(),type,
+                if(type=="FILL_GAP")key["acceptedAnswers"].map{value->value.asText()}.toSet() else emptySet())
         }
         checkRequest(questions.size in 8..10,"Invalid lesson question count")
         val grade=try{LessonGrader.grade(questions,request.answers)}catch(error:IllegalArgumentException){throw LessonRequestException(HttpStatus.BAD_REQUEST,"LESSON_REQUEST_INVALID",error.message ?: "Invalid answers")}
@@ -133,3 +136,4 @@ class LessonService(private val jdbc: JdbcTemplate, private val mapper: ObjectMa
     private fun checkRequest(valid: Boolean, message: String) { if (!valid) throw LessonRequestException(HttpStatus.BAD_REQUEST,"LESSON_REQUEST_INVALID",message) }
     private fun notFound(): Nothing = throw LessonRequestException(HttpStatus.NOT_FOUND,"ATTEMPT_NOT_FOUND","Attempt not found")
 }
+

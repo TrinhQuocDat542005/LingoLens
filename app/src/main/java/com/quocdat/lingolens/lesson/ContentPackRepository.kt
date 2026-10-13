@@ -83,11 +83,29 @@ class ContentPackRepository(private val db:LearningDatabase,private val gateway:
         require(pack.sentencePatterns.isNotEmpty() && pack.sentencePatterns.all { it.pattern.isNotBlank() && it.example.isNotBlank() && it.translation.isNotBlank() })
         require(pack.questions.size in 8..10 && pack.questions.map { it.id }.distinct().size==pack.questions.size)
         require(pack.questions.map { it.position }==(1..pack.questions.size).toList())
+        val mixed=pack.questions.any{it.type!="MEANING_CHOICE"}
+        if(mixed) require(pack.questions.size==10 && pack.questions.all{it.weight==1})
+        require(pack.questions.count{it.type=="LISTEN_CHOICE"}<=2)
         pack.questions.forEach { q ->
             UUID.fromString(q.id)
-            require(q.type=="MEANING_CHOICE" && q.prompt.isNotBlank() && q.explanation.isNotBlank() && q.weight in 1..10)
-            require(q.options.size==4 && q.options.map { it.key }.distinct().size==4 && q.options.map { it.position }==listOf(1,2,3,4))
-            require(q.options.all { it.key.isNotBlank() && it.label.isNotBlank() } && q.answerKey.optionKey in q.options.map { it.key })
+            require(q.type in setOf("MEANING_CHOICE","LISTEN_CHOICE","FILL_GAP") && q.prompt.isNotBlank() && q.explanation.isNotBlank() && q.weight in 1..10)
+            if(mixed) require(q.prompt.length<=1000 && q.explanation.length<=2000)
+            if(q.type=="FILL_GAP") {
+                require(q.options.isEmpty() && q.answerKey.optionKey.isEmpty())
+                val variants=requireNotNull(q.answerKey.acceptedAnswers)
+                require(variants.size in 1..8 && variants.all{it.length<=500 && LessonGrader.normalizeFill(it).isNotBlank()})
+                require(variants.map{LessonGrader.normalizeFill(it)}.distinct().size==variants.size)
+                require(q.speechText==null && q.fallbackPrompt==null)
+            } else {
+                require(q.options.size==4 && q.options.map { it.key }.distinct().size==4 && q.options.map { it.position }==listOf(1,2,3,4))
+                require(q.options.all { it.key.isNotBlank() && it.label.isNotBlank() } && q.answerKey.optionKey in q.options.map { it.key })
+                require(q.answerKey.acceptedAnswers==null)
+                if(mixed) require(q.options.all{it.key.length<=8 && it.label.length<=500})
+                if(q.type=="LISTEN_CHOICE") {
+                    require(q.speechText?.let{it.isNotBlank() && it.length<=1000}==true)
+                    require(q.fallbackPrompt?.let{it.isNotBlank() && it.length<=1000}==true)
+                } else require(q.speechText==null && q.fallbackPrompt==null)
+            }
         }
         pack
     } catch(error:Exception){ throw IllegalArgumentException("Invalid content pack",error) }

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "LingoLens week 5 seed v1",
-  "description": "Structural contract. SeedValidator also enforces references, unique IDs/positions/words, normalized words, nonblank strings, DEMO weight 1, exactly three consecutive lessons, and a 2 MB input limit.",
+  "title": "LingoLens week 7 seed v1 (legacy compatible)",
+  "description": "Legacy choice seeds remain valid; mixed lessons require ten equal-weight questions, at most two listen questions, speech and explicit fallback, fill options empty and explicit approved variants. Semantic SeedValidator enforces references and normalized distinct variants.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -345,7 +345,11 @@
                   "maxLength": 36
                 },
                 "type": {
-                  "const": "MEANING_CHOICE"
+                  "enum": [
+                    "MEANING_CHOICE",
+                    "LISTEN_CHOICE",
+                    "FILL_GAP"
+                  ]
                 },
                 "prompt": {
                   "type": "string",
@@ -394,28 +398,173 @@
                         "maximum": 4
                       }
                     }
-                  },
-                  "minItems": 4,
-                  "maxItems": 4
+                  }
                 },
                 "answerKey": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "optionKey"
-                  ],
                   "properties": {
+                    "acceptedAnswers": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500
+                      },
+                      "maxItems": 8,
+                      "minItems": 1,
+                      "uniqueItems": true
+                    },
                     "optionKey": {
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 8
+                    },
+                    "fallbackPrompt": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1000
+                    }
+                  }
+                },
+                "speechText": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                }
+              },
+              "allOf": [
+                {
+                  "then": {
+                    "properties": {
+                      "options": {
+                        "maxItems": 4,
+                        "minItems": 4
+                      },
+                      "speechText": false,
+                      "answerKey": {
+                        "properties": {
+                          "acceptedAnswers": false,
+                          "fallbackPrompt": false
+                        },
+                        "required": [
+                          "optionKey"
+                        ]
+                      }
+                    }
+                  },
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "MEANING_CHOICE"
+                      }
+                    }
+                  }
+                },
+                {
+                  "then": {
+                    "properties": {
+                      "answerKey": {
+                        "properties": {
+                          "acceptedAnswers": false
+                        },
+                        "required": [
+                          "optionKey",
+                          "fallbackPrompt"
+                        ]
+                      },
+                      "options": {
+                        "maxItems": 4,
+                        "minItems": 4
+                      }
+                    },
+                    "required": [
+                      "speechText"
+                    ]
+                  },
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "LISTEN_CHOICE"
+                      }
+                    }
+                  }
+                },
+                {
+                  "then": {
+                    "properties": {
+                      "options": {
+                        "maxItems": 0,
+                        "minItems": 0
+                      },
+                      "speechText": false,
+                      "answerKey": {
+                        "properties": {
+                          "optionKey": false,
+                          "fallbackPrompt": false
+                        },
+                        "required": [
+                          "acceptedAnswers"
+                        ]
+                      }
+                    }
+                  },
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "FILL_GAP"
+                      }
                     }
                   }
                 }
-              }
+              ]
             },
             "minItems": 8,
-            "maxItems": 10
+            "maxItems": 10,
+            "allOf": [
+              {
+                "maxContains": 2,
+                "minContains": 0,
+                "contains": {
+                  "properties": {
+                    "type": {
+                      "const": "LISTEN_CHOICE"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                }
+              },
+              {
+                "then": {
+                  "items": {
+                    "properties": {
+                      "weight": {
+                        "const": 1
+                      }
+                    }
+                  },
+                  "maxItems": 10,
+                  "minItems": 10
+                },
+                "if": {
+                  "contains": {
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "LISTEN_CHOICE",
+                          "FILL_GAP"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ]
+                  }
+                }
+              }
+            ]
           }
         }
       },

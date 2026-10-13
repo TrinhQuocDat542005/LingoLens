@@ -29,7 +29,9 @@ class LessonSessionRepository(private val db:LearningDatabase,private val packs:
         val session=resume(account,id);check(session.phase=="ANSWERING" && session.frozenPayloadJson==null){"Submission is immutable"}
         val pack=pack(account,session.revisionId)
         require(position in pack.questions.indices)
-        require(pack.questions.any{q->q.id==question && q.options.any{it.key==option}}){"Invalid question or option"}
+        val target=requireNotNull(pack.questions.firstOrNull{it.id==question}){"Invalid question or option"}
+        if(target.type=="FILL_GAP") require(option.length<=500){"Fill answer is too long"}
+        else require(target.options.any{it.key==option}){"Invalid question or option"}
         val answers=answers(session).toMutableMap();answers[question]=option
         db.lessonDao().saveSession(session.copy(position=position,answersJson=gson.toJson(answers),updatedAt=clock()))
         signedIn(account)
