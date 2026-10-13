@@ -571,7 +571,7 @@ Quyết định của chủ dự án: **1A, 2A, 3A, 4A, 5A, 6A**, kèm các đi�
 
 ### 14.1. Pack bất biến và chấm tạm
 
-- Manifest một chặng liệt kê ba lesson/revision, vị trí, contentStatus, schemaVersion, en-US, URL, byteLength và SHA-256 mỗi pack. Pack theo revision, không thêm course version; seed packId khác revisionId của pack tải về.
+- Manifest một chặng liệt kê ba lesson/revision, vị trí, contentStatus, schemaVersion, URL, byteLength và SHA-256 mỗi pack. **[ĐÍNH CHÍNH — 13/10/2026, chủ dự án chọn A]** Locale `en-US` nằm trong `LessonPack.pronunciationLocale`, không nằm trong manifest. Giữ nguyên wire format và manifest hiện có. Pack theo revision, không thêm course version; seed packId khác revisionId của pack tải về.
 - Payload JSON có snapshot từ/mẫu câu, thứ tự questions/options, answerKey và trọng số. Không chứa token/progress/XP của tài khoản. Checksum tính trên bytes ổn định; không đưa trạng thái enrollment hay server time thay đổi vào bytes bất biến.
 - Endpoint manifest/pack yêu cầu đăng nhập. Pack chỉ trả revision PUBLISHED/ARCHIVED hợp lệ; DRAFT hoặc không có revision bị từ chối. Tải revision cũ theo ID cụ thể, không tự đổi session sang bản mới.
 - Tải vào vùng tạm → kiểm tra size/checksum/schema/FK nội bộ → commit toàn pack vào Room. complete=true chỉ sau validation và transaction thành công. Chặng tải đủ khi cả ba pack complete; pack dở không dùng, không thay pack tốt. Không xóa pack còn được session/outbox tham chiếu.
@@ -643,6 +643,6 @@ Checksum SHA-256 LF của nguồn V1–V12 (SQL, Kotlin migration và SQL resour
 | 4 | Durable session/outbox | Crash trước/sau enqueue, immutable retry, resume/account switch |
 | 5 | Sync/reconnect, scheduler | Lost response, queue độc lập, auth/account fence; **dừng báo cáo và chờ tiếp tục** |
 | **6 — được duyệt sau bước 5** | Nối repository Room/sync vào UI cả ba bài; tải chặng, resume, kết quả tạm/xác nhận/BLOCKED, giữ đáp án | Test UI model/Room trước; đủ regression/lint/build APK; **dừng cho chủ dự án test thiết bị, chưa làm bước 7 hoặc mở PR** |
-| **7 — chưa được phép** | Nghiệm thu thiết bị và đối chiếu tiêu chí, mở PR sau test của chủ dự án | Process death, vuốt tắt/reboot, upgrade APK không uninstall, hai account, revision mới, tải dở và mất response; không lấy Robolectric thay instrumentation |
+| **7 — được duyệt nghiệm thu kỹ thuật ngày 13/10** | Đối chiếu tiêu chí và mở PR sau gate regression chung; chủ dự án bỏ checkpoint test tay trước PR | Process death, vuốt tắt/reboot, upgrade APK không uninstall, hai account trên thiết bị vẫn ghi đạt một phần; không lấy Robolectric thay instrumentation. Ma trận/test/timestamp tại docs/portfolio/week6-step7.md; không merge main |
 
 Mỗi bước một commit trên nhánh riêng, test quan trọng viết trước; đủ Android/backend/postgresTest/lint gate baseline 38/admin build sau mỗi bước. **Dừng ngay nếu test fail hoặc cần đổi hợp đồng**; không sửa tạm để đi tiếp. Quyền làm liên tục có checkpoint bắt buộc sau bước 1, rồi mới tiếp tục bước 2–5 khi chủ dự án nói tiếp tục; không merge main. **[CẬP NHẬT — bước 6]** Chủ dự án đã duyệt bước 6 riêng: UI hiển thị số đúng/tổng, progress tạm có nhãn chờ server, XP chỉ lấy snapshot đã xác nhận; phiên BLOCKED giữ đáp án/payload và mã lỗi, không tự tạo UUID/gửi lại. Chưa có PRACTICE UI. Test tay và lệnh cài/backup tại `docs/product/week6-testing.md`; bước 7/PR vẫn chờ kết quả chủ dự án.

@@ -6,7 +6,7 @@
 
 LingoLens combines a Kotlin Android app, a Spring Boot API and a React admin console. Follow a three-lesson stage, study vocabulary, answer meaning questions and earn server-confirmed XP. Capture everyday objects, select a detected bounding box and explore English vocabulary. Images are processed on the phone and are not uploaded to the API.
 
-**Branch status:** week 5 code was merged in PR #2 (`e1da7b7`). Week 6 steps 0–6 are on `feature/offline-lessons`, awaiting owner device testing before step 7 and a pull request; they are not merged into main. All three lessons use **dev/test DEMO content**. See the [step 6 report](docs/portfolio/week6-step6.md) and [installation, database backup and manual test guide](docs/product/week6-testing.md). DEMO content is rejected in production; independent content review is required before week 8.
+**Branch status:** week 5 code was merged in PR #2 (`e1da7b7`). Week 6 steps 0–7 are on `feature/offline-lessons`, with the technical regression gate passed and device-dependent criteria explicitly marked partial; they are not merged into main. See the [week 6 acceptance matrix](docs/portfolio/week6-step7.md) and [installation, database backup and manual test guide](docs/product/week6-testing.md). All three lessons use **dev/test DEMO content**, rejected in production; independent content review is required before week 8.
 
 ## Implemented features
 
@@ -251,6 +251,6 @@ The bundled EfficientDet-Lite0 INT8 model is pretrained for COCO and used throug
 3. Offline write queue, retry, idempotent sync and cloud library restoration — [week 3 report](docs/portfolio/week3.md).
 4. Offline spaced review, durable sessions, shared scheduling and review statistics — [week 4 report](docs/portfolio/week4.md).
 5. Guided learning backend, compatible learner settings and one-time lesson XP — week 5 code merged in PR #2 (`e1da7b7`).
-6. Three-lesson offline UI, durable packs/sessions/attempt sync — [week 6 step 6 report](docs/portfolio/week6-step6.md), feature branch awaiting device testing and step 7 acceptance.
+6. Three-lesson offline UI, durable packs/sessions/attempt sync — [week 6 acceptance matrix](docs/portfolio/week6-step7.md), technical gate passed on the feature branch; device checks remain partial and changes await PR review.
 
 The [approved v2 specification and weeks 5–9 plan](docs/product/lingolens-spec-v2.md) also includes account deletion and privacy preparation before release. Those later milestones are still planned work.

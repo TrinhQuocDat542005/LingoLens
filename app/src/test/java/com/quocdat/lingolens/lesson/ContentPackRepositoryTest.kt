@@ -30,6 +30,7 @@ class ContentPackRepositoryTest {
     private var corruptStructure=false
     private var truncated=false
     private var wrongRevision=false
+    private var wrongLocale:String?=null
     private var scheduled=0
     private var afterDownload: ()->Unit = {}
     private fun hash(bytes: ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
@@ -39,6 +40,7 @@ class ContentPackRepositoryTest {
             PackReference(p.lessonId,p.revisionId,p.title,p.position,p.contentStatus,"/api/v1/curriculum/revisions/${p.revisionId}/pack",body.size.toLong(),if(wrongChecksum && i==1) "bad" else hash(body))
         })
         private fun body(i:Int):ByteArray {
+            wrongLocale?.let{locale->return String(bytes[i]).replace("\"en-US\"","\"$locale\"").toByteArray()}
             if(corruptStructure && i==0) return String(bytes[i]).replace("MEANING_CHOICE","UNKNOWN").toByteArray()
             if(wrongRevision && i==0) return String(bytes[i]).replace(packs[i].revisionId,"99999999-9999-4999-8999-999999999999").toByteArray()
             return bytes[i]
@@ -104,5 +106,18 @@ class ContentPackRepositoryTest {
         var rejected=false;try{repository.downloadCourse(1,course)}catch(_:IllegalArgumentException){rejected=true}
         assertTrue(rejected);assertEquals(0,scheduled)
         wrongChecksum=false;repository.downloadCourse(1,course);assertEquals(1,scheduled)
+    }
+    @Test fun `non US pack locale is rejected before commit even with matching checksum`()=runBlocking {
+        for(locale in listOf("en-GB","fr-FR")){
+            wrongLocale=locale
+            val rejected=try{repository.downloadCourse(1,course);null}catch(error:IllegalArgumentException){error}
+            assertNotNull("Unsupported locale $locale must be rejected",rejected)
+            assertEquals("Invalid content pack",rejected!!.message)
+            packs.forEach{assertNull(db.lessonDao().pack(1,it.revisionId))}
+            assertTrue(repository.ready(1,course).isEmpty());assertEquals(0,scheduled)
+        }
+        wrongLocale=null;repository.downloadCourse(1,course)
+        val ready=repository.ready(1,course);assertEquals(3,ready.size)
+        assertTrue(ready.all{it.pronunciationLocale=="en-US"})
     }
 }

@@ -43,6 +43,7 @@ class ContentPackPostgresTests {
             assertArrayEquals(first,second); assertEquals(first.size.toLong(),reference.byteLength)
             assertEquals(MessageDigest.getInstance("SHA-256").digest(first).joinToString("") { "%02x".format(it) },reference.checksum)
             val body=mapper.readTree(first); assertEquals(8,body["questions"].size()); assertEquals(6,body["vocabularies"].size())
+            assertEquals("en-US",body["pronunciationLocale"].asText())
             assertTrue(body["questions"].all { it["answerKey"]["optionKey"].asText().isNotEmpty() })
         }
     }
