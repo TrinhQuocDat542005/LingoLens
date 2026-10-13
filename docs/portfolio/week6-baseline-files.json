@@ -1,0 +1,86 @@
+[
+  {
+    "path": "backend/src/main/resources/db/migration/V1__create_users_and_roles.sql",
+    "sha256": "A5B4642CAD63F3CF23E8DC770C93AB6353AC854E078823D8C191F475ED2F6E66"
+  },
+  {
+    "path": "backend/src/main/resources/db/migration/V2__seed_roles.sql",
+    "sha256": "D331597C071878A398722533AB2745E60D682D364064CA3E1E93E6E3675B07E4"
+  },
+  {
+    "path": "backend/src/main/resources/db/migration/V3__harden_auth_and_profile.sql",
+    "sha256": "53E5C58FDB5725494BCBB854DF4531FE0183A3289057D2261003D82C208D1D9F"
+  },
+  {
+    "path": "backend/src/main/resources/db/migration/V4__admin_dashboard_foundation.sql",
+    "sha256": "4B93FA5DBDC713212940B1DBE0F13DB3A0D0E865F3BCD7DBF5AF029037988BFF"
+  },
+  {
+    "path": "backend/src/main/resources/db/migration/V5__seed_core_vocabularies.sql",
+    "sha256": "D8CD4FF1765B7D4C17212BD685109E10DA887491442DBC61BC6BE182B0BEC66A"
+  },
+  {
+    "path": "backend/src/main/resources/db/migration/V6__link_reports_to_recognition_history.sql",
+    "sha256": "3DC62751071167EE6CFDA22E822B7A8416397A9EEAFEAE7999DF6CA205589143"
+  },
+  {
+    "path": "backend/src/main/resources/db/migration/V7__durable_learning_sync.sql",
+    "sha256": "D0818DA1723921E3FB93DDA39F17983083D3D890D4BEF16A4B9B4694B0C63C09"
+  },
+  {
+    "path": "backend/src/main/resources/db/migration/V8__spaced_review.sql",
+    "sha256": "A2E556FB2F10E6F69DC26A0EB3322A26EF0BA876470D4FF60D554DD3030A84BB"
+  },
+  {
+    "path": "backend/src/main/resources/db/migration/V9__learner_settings.sql",
+    "sha256": "9FE3825692AB38D17CDECFB08D62C102908E04B03DE84773F3A33424A8F53A1B"
+  },
+  {
+    "path": "backend/src/main/resources/db/content-schema/V10-postgres.sql",
+    "sha256": "B61FCF21A8651096816AB77F56B77049DB0E3B2096250F5B3E8B0ABA9F6ADAE9"
+  },
+  {
+    "path": "backend/src/main/resources/db/content-schema/V10.sql",
+    "sha256": "7490C363B6F354E302789156BB4706CD02981219ECC01F3DD80F444DCB7CCE41"
+  },
+  {
+    "path": "backend/src/main/resources/db/content-schema/V11-postgres.sql",
+    "sha256": "EE878C2400F6EEC8185466826FFB9C19D5C05A821B32BA840DFABC1253654DF7"
+  },
+  {
+    "path": "backend/src/main/resources/db/content-schema/V11.sql",
+    "sha256": "1F0983366940FE2B733C813149C9C38E1FC2B5A93D8D3D6032FF374DD9685FEF"
+  },
+  {
+    "path": "backend/src/main/resources/db/content-schema/V12-postgres.sql",
+    "sha256": "7832EC4C504A8CC2C9D7F34A7BF3FE419450A6E69E72D4DB97A1AA2A2A77450D"
+  },
+  {
+    "path": "backend/src/main/resources/db/content-schema/V12.sql",
+    "sha256": "AA0A91242F8E23DA092F80E2F9FC8A2ACFC3A39114EB0BA285E443714EB4F6BC"
+  },
+  {
+    "path": "backend/src/main/kotlin/db/migration/V10__curriculum.kt",
+    "sha256": "77C85511D82ED5B0ED4A5E6EA74247313F9ECCF8156B73C304CF8386C699ED56"
+  },
+  {
+    "path": "backend/src/main/kotlin/db/migration/V11__assessment.kt",
+    "sha256": "FC0C3BBE97FD98D90725191200A506E2953B7B01D79A13AAC24D50BECB85C80B"
+  },
+  {
+    "path": "backend/src/main/kotlin/db/migration/V12__content_provenance.kt",
+    "sha256": "B1215827AFDBC645094E679E95C228DD4B5B30269A9ED14EE79A30C00136784B"
+  },
+  {
+    "path": "app/schemas/com.quocdat.lingolens.data.local.LearningDatabase/1.json",
+    "sha256": "F6E3420D8BA5D426C1452EDBCA3E4C14B90F443491548D6A0F725BDCB5CB7BEE"
+  },
+  {
+    "path": "app/schemas/com.quocdat.lingolens.data.local.LearningDatabase/2.json",
+    "sha256": "6C9869AFD4800E898E44F02C5A99C29F6B313FDD6F75AB322EAC579FD31A1508"
+  },
+  {
+    "path": "app/schemas/com.quocdat.lingolens.data.local.LearningDatabase/3.json",
+    "sha256": "C952D5E1D72460B2C8EA51229B67EAAF51EF73DC2660E6916A5BDB5B063F15E4"
+  }
+]

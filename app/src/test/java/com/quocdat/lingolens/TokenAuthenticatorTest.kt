@@ -2,10 +2,12 @@ package com.quocdat.lingolens
 
 import com.quocdat.lingolens.data.local.*
 import com.quocdat.lingolens.data.remote.TokenAuthenticator
+import com.quocdat.lingolens.data.remote.AuthInterceptor
 import com.quocdat.lingolens.data.remote.RequestAccount
 import com.quocdat.lingolens.data.remote.api.AuthApi
 import com.quocdat.lingolens.data.remote.dto.*
 import okhttp3.*
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Test
 import org.junit.Assert.*
 import java.io.IOException
@@ -70,5 +72,21 @@ class TokenAuthenticatorTest {
             .removeHeader("X-LingoLens-Account").tag(RequestAccount::class.java, RequestAccount("a@example.com")).build()).build()
         assertNull(TokenAuthenticator(store, api).authenticate(null, response))
         assertEquals(0, api.calls.get())
+    }
+    @Test fun `A account header cannot dispatch using B token after logout login`() {
+        val store=Store();var dispatched=0;var bearer:String?=null
+        val client=OkHttpClient.Builder().addInterceptor(AuthInterceptor(store)).addInterceptor{chain->
+            dispatched++;bearer=chain.request().header("Authorization")
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body("{}".toResponseBody()).build()
+        }.build()
+        val request=Request.Builder().url("http://localhost/api/v1/lesson-attempts").header("X-LingoLens-Account","1").build()
+        store.value=null
+        try{client.newCall(request).execute().close();fail("Signed out request must be rejected")}catch(_:IOException){}
+        store.value=StoredSession("b-access","b-refresh","b@example.com","B");store.id=2
+        try{client.newCall(request).execute().close();fail("A request must be rejected before dispatch with B credentials")}catch(_:IOException){}
+        assertEquals(0,dispatched);assertNull(bearer)
+        store.value=StoredSession("a-access","a-refresh","a@example.com","A");store.id=1
+        client.newCall(request).execute().close();assertEquals(1,dispatched);assertEquals("Bearer a-access",bearer)
     }
 }

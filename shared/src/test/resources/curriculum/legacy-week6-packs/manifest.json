@@ -1,0 +1,22 @@
+{
+  "sourceCommit": "c339c4ee751316760b9c518f2ea0cd6e96f82530",
+  "source": "ContentPackService.pack against PostgreSQL15, original demo-week5.json, before week7 DTO extensions",
+  "packs": [
+    {
+      "revisionId": "00000000-0000-4000-8000-000000000020",
+      "byteLength": 5143,
+      "checksum": "78c22db815e403476a245efd0c7ad8997e72bec49641f8cc74b6600b97d96c0c"
+    },
+    {
+      "revisionId": "00000000-0000-4000-8000-000000000021",
+      "byteLength": 4956,
+      "checksum": "8e8c78734d1a533e85920252d3bda139e64d2ebbbe9644cd4b1a63b93f5adfa0"
+    },
+    {
+      "revisionId": "00000000-0000-4000-8000-000000000022",
+      "byteLength": 5089,
+      "checksum": "6a5949452b64321db6c4121a8a5ac5468343aa01496fdd2778d478a0b49aefec"
+    }
+  ],
+  "capturedAt": "2026-10-13T09:32:08+07:00"
+}

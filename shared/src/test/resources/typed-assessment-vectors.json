@@ -1,0 +1,456 @@
+[
+  {
+    "name": "fill trims collapses spaces tabs and newlines and ignores case",
+    "questions": [
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "ice cream"
+        ],
+        "raw": "  ICE\t cream\n "
+      }
+    ],
+    "expected": {
+      "correctCount": 1,
+      "questionCount": 1,
+      "percent": 100,
+      "passed": true,
+      "marks": [
+        true
+      ]
+    }
+  },
+  {
+    "name": "fill accepts only declared variants",
+    "questions": [
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "television",
+          "TV"
+        ],
+        "raw": "TV"
+      }
+    ],
+    "expected": {
+      "correctCount": 1,
+      "questionCount": 1,
+      "percent": 100,
+      "passed": true,
+      "marks": [
+        true
+      ]
+    }
+  },
+  {
+    "name": "fill refuses undeclared synonyms",
+    "questions": [
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "television"
+        ],
+        "raw": "tv"
+      }
+    ],
+    "expected": {
+      "correctCount": 0,
+      "questionCount": 1,
+      "percent": 0,
+      "passed": false,
+      "marks": [
+        false
+      ]
+    }
+  },
+  {
+    "name": "fill refuses fuzzy spelling",
+    "questions": [
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "notebook"
+        ],
+        "raw": "notebok"
+      }
+    ],
+    "expected": {
+      "correctCount": 0,
+      "questionCount": 1,
+      "percent": 0,
+      "passed": false,
+      "marks": [
+        false
+      ]
+    }
+  },
+  {
+    "name": "fill does not remove punctuation",
+    "questions": [
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "coffee"
+        ],
+        "raw": "coffee!"
+      }
+    ],
+    "expected": {
+      "correctCount": 0,
+      "questionCount": 1,
+      "percent": 0,
+      "passed": false,
+      "marks": [
+        false
+      ]
+    }
+  },
+  {
+    "name": "fill normalization includes Unicode whitespace",
+    "questions": [
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "ice cream"
+        ],
+        "raw": " ICE   CREAM "
+      }
+    ],
+    "expected": {
+      "correctCount": 1,
+      "questionCount": 1,
+      "percent": 100,
+      "passed": true,
+      "marks": [
+        true
+      ]
+    }
+  },
+  {
+    "name": "listen and explicit nonaudio alternative use the same mark",
+    "questions": [
+      {
+        "type": "LISTEN_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "A"
+      },
+      {
+        "type": "LISTEN_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "B"
+      }
+    ],
+    "expected": {
+      "correctCount": 1,
+      "questionCount": 2,
+      "percent": 50,
+      "passed": false,
+      "marks": [
+        true,
+        false
+      ]
+    }
+  },
+  {
+    "name": "mixed ten questions with 7 correct",
+    "questions": [
+      {
+        "type": "MEANING_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "A"
+      },
+      {
+        "type": "MEANING_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "A"
+      },
+      {
+        "type": "LISTEN_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "A"
+      },
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "good morning"
+        ],
+        "raw": " GOOD  MORNING "
+      },
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "good morning"
+        ],
+        "raw": " GOOD  MORNING "
+      },
+      {
+        "type": "MEANING_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "A"
+      },
+      {
+        "type": "LISTEN_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "A"
+      },
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "good morning"
+        ],
+        "raw": "good mornings"
+      },
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "good morning"
+        ],
+        "raw": "good mornings"
+      },
+      {
+        "type": "MEANING_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "B"
+      }
+    ],
+    "expected": {
+      "correctCount": 7,
+      "questionCount": 10,
+      "percent": 70,
+      "passed": true,
+      "marks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  {
+    "name": "mixed ten questions with 6 correct",
+    "questions": [
+      {
+        "type": "MEANING_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "A"
+      },
+      {
+        "type": "MEANING_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "A"
+      },
+      {
+        "type": "LISTEN_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "A"
+      },
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "good morning"
+        ],
+        "raw": " GOOD  MORNING "
+      },
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "good morning"
+        ],
+        "raw": " GOOD  MORNING "
+      },
+      {
+        "type": "MEANING_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "A"
+      },
+      {
+        "type": "LISTEN_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "B"
+      },
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "good morning"
+        ],
+        "raw": "good mornings"
+      },
+      {
+        "type": "FILL_GAP",
+        "weight": 1,
+        "options": [],
+        "correctKey": "",
+        "acceptedAnswers": [
+          "good morning"
+        ],
+        "raw": "good mornings"
+      },
+      {
+        "type": "MEANING_CHOICE",
+        "weight": 1,
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correctKey": "A",
+        "raw": "B"
+      }
+    ],
+    "expected": {
+      "correctCount": 6,
+      "questionCount": 10,
+      "percent": 60,
+      "passed": false,
+      "marks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  }
+]

@@ -13,7 +13,14 @@ data class SubmitLessonRequest(val id: UUID, val lessonRevisionId: UUID,
     @field:Min(1) val clientCompletedAt: Long, val submittedOffline: Boolean = false,
     @field:Valid @field:Size(min=8,max=10) val answers: List<SubmittedAnswer>)
 data class AttemptResult(val id: UUID, val lessonId: UUID, val mode: String, val correctCount: Int,
-    val questionCount: Int, val scorePercent: Int, val passed: Boolean, val xpAwarded: Int)
+    val questionCount: Int, val scorePercent: Int, val passed: Boolean, val xpAwarded: Int,
+    val confirmationStatus: String = "CONFIRMED", val retryable: Boolean = false, val code: String? = null)
+
+data class AttemptSubmissionResponse(val data: AttemptResult, val success: Boolean = true,
+    val message: String = "Attempt recorded", val code: String? = data.code,
+    val timestamp: java.time.Instant = java.time.Instant.now())
+data class ConfirmedLessonProgress(val lessonId:UUID,val bestScorePercent:Int,val passed:Boolean)
+data class LessonCourseSnapshot(val courseId:UUID,val enrollmentStatus:String,val progress:List<ConfirmedLessonProgress>,val xpTotal:Int)
 data class CourseCard(val id: UUID, val title: String, val contentStatus: String, val firstLessonId: UUID, val firstRevisionId: UUID, val completed: Boolean)
 data class CurriculumCatalog(val courses: List<CourseCard>, val xpTotal: Int)
 data class OptionView(val key: String, val label: String, val position: Int)

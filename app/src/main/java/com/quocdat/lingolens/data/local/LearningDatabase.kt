@@ -56,12 +56,26 @@ interface SyncDao {
 }
 
 @Database(entities = [SavedWordEntity::class, LearningEvent::class, VocabularyCache::class, OutboxOperation::class, SyncAccount::class,
-    ReviewCard::class, ReviewEvent::class, ReviewSession::class], version = 3, exportSchema = true)
+    ReviewCard::class, ReviewEvent::class, ReviewSession::class, ContentPack::class, LessonSession::class,
+    LessonAttemptOutbox::class, CurriculumAccountState::class], version = 4, exportSchema = true)
 abstract class LearningDatabase : RoomDatabase() {
     abstract fun learningDao(): LearningDao
     abstract fun syncDao(): SyncDao
     abstract fun reviewDao(): ReviewDao
+    abstract fun lessonDao(): LessonDao
     companion object {
+        val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS ContentPack (accountId INTEGER NOT NULL, revisionId TEXT NOT NULL, lessonId TEXT NOT NULL, courseId TEXT NOT NULL, schemaVersion INTEGER NOT NULL, manifestJson TEXT NOT NULL, contentJson TEXT NOT NULL, checksum TEXT NOT NULL, byteLength INTEGER NOT NULL, downloadedAt INTEGER NOT NULL, complete INTEGER NOT NULL, PRIMARY KEY(accountId, revisionId))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS LessonSession (accountId INTEGER NOT NULL, id TEXT NOT NULL, lessonId TEXT NOT NULL, revisionId TEXT NOT NULL, mode TEXT NOT NULL, questionOrderJson TEXT NOT NULL, position INTEGER NOT NULL, answersJson TEXT NOT NULL, phase TEXT NOT NULL, startedAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, frozenPayloadJson TEXT, serverResultJson TEXT, PRIMARY KEY(accountId, id), FOREIGN KEY(accountId, revisionId) REFERENCES ContentPack(accountId, revisionId) ON UPDATE NO ACTION ON DELETE NO ACTION)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_LessonSession_accountId_revisionId ON LessonSession(accountId, revisionId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_LessonSession_accountId_phase ON LessonSession(accountId, phase)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS LessonAttemptOutbox (accountId INTEGER NOT NULL, attemptId TEXT NOT NULL, sessionId TEXT NOT NULL, payloadJson TEXT NOT NULL, payloadHash TEXT NOT NULL, state TEXT NOT NULL, queuedAt INTEGER NOT NULL, retryCount INTEGER NOT NULL, lastError TEXT, PRIMARY KEY(accountId, attemptId), FOREIGN KEY(accountId, sessionId) REFERENCES LessonSession(accountId, id) ON UPDATE NO ACTION ON DELETE NO ACTION)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_LessonAttemptOutbox_accountId_sessionId ON LessonAttemptOutbox(accountId, sessionId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_LessonAttemptOutbox_accountId_state_queuedAt ON LessonAttemptOutbox(accountId, state, queuedAt)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS CurriculumAccountState (accountId INTEGER NOT NULL, courseId TEXT NOT NULL, enrollmentStatus TEXT NOT NULL, confirmedProgressJson TEXT NOT NULL, confirmedXpTotal INTEGER NOT NULL, lastConfirmedAt INTEGER, PRIMARY KEY(accountId, courseId))")
+            }
+        }
         val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS ReviewCard (accountId INTEGER NOT NULL, word TEXT NOT NULL, dueAt INTEGER NOT NULL, intervalDays INTEGER NOT NULL, ease REAL NOT NULL, repetitions INTEGER NOT NULL, lapses INTEGER NOT NULL, stage TEXT NOT NULL, lastReviewedAt INTEGER, PRIMARY KEY(accountId, word))")

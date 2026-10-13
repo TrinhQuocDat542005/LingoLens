@@ -1,6 +1,6 @@
 # LingoLens — Đặc tả sản phẩm và kiến trúc v2
 
-**Trạng thái:** chủ dự án đã duyệt preflight và cho phép thực hiện liên tục **bước 1–5 của tuần 5** trên một nhánh riêng. Mỗi bước một commit và chạy đủ regression/build/lint; test thất bại thì dừng báo cáo. Sau bước 5 dừng để chủ dự án test app; bước 6 và tuần 6 trở đi chưa được phép triển khai.
+**Trạng thái cập nhật 13/10/2026:** tuần 6 đạt gate kỹ thuật bước 7, PR #4 đang mở và chưa merge; bằng chứng thiết bị vẫn đạt một phần. Chủ dự án cho tiếp tục tuần 7 trên nhánh feature/question-types-tts theo mục 15; test fail/lint tăng hoặc hợp đồng cần đổi thì dừng. Không tự làm tuần 8–9.
 
 **Căn cứ:** đặc tả ban đầu trong cuộc trò chuyện, đối chiếu migration V1–V8, Room v3 và quyết định **1A, 2A, 3A, 4A, 5A, 6A**, cùng các bổ sung của chủ dự án. Tài liệu này là đặc tả đích, không phải báo cáo tính năng đã triển khai.
 
@@ -259,7 +259,7 @@ Service xác nhận attempt thuộc đúng user/lesson. Revision thay đổi kh�
 
 Bổ sung CHECK và FK ghép cho các bảng này là ràng buộc mục tiêu, không mô tả là đã có trong V8. Chỉ thêm sau kiểm tra dữ liệu và tác động xóa tài khoản. received_at cho review_events là bổ sung tương lai nếu phép đo cần; không suy diễn timestamp nhận cho mọi lượt ôn cũ. Attempt UUID không ép vào sync_receipts.remote_id BIGINT.
 
-Room hiện có tiếp tục lưu từ/cache/card/event/session/outbox. Những cấu trúc mới cần có ContentPack (revisionId PK, manifest/checksum/downloadedAt/complete), LessonSession (id PK, accountId/revisionId/mode/order/position/answers/phase/start/update) và hàng đợi analytics riêng. Chi tiết Room mới và migration được thiết kế khi bắt đầu code; không xóa content pack còn được session/outbox tham chiếu.
+Room hiện có tiếp tục lưu từ/cache/card/event/session/outbox. **[CẬP NHẬT TUẦN 6]** Room v4 thêm ContentPack, LessonSession, LessonAttemptOutbox và CurriculumAccountState; tất cả có khóa ghép accountId theo mục 14. Không xóa content pack còn được session/outbox tham chiếu. Analytics vẫn thuộc tuần 8–9, không thêm hàng đợi analytics trong tuần 6.
 
 ### 3.6. XP
 
@@ -336,7 +336,7 @@ Offline (từ tuần 6, chưa triển khai tuần 5) hiển thị điểm/tiến
 | PostgreSQL trường mới | TIMESTAMPTZ; backend dùng Instant |
 | Room, shared scheduler, sync learning/review hiện tại | Epoch milliseconds Long/BIGINT; không dùng epoch seconds |
 | Chuyển đổi | Mapper tại biên API/persistence; không tự đổi trong Composable |
-| API mới cho timestamp lesson/analytics | ISO-8601 UTC cho Instant; mapping sang epoch ms tại Android; API sync cũ giữ kiểu số |
+| API timestamp | **[NGOẠI LỆ ĐÃ DUYỆT TUẦN 6]** Lesson attempt giữ clientCompletedAt epoch ms của tuần 5 để tương thích payload/hash/retry; Room dùng epoch ms, backend mapper chuyển sang Instant/TIMESTAMPTZ. API sync cũ giữ kiểu số; API Instant mới khác dùng ISO-8601 UTC |
 | Timestamp do client khai báo | Giữ riêng với received_at; không coi là trusted clock |
 | TIMESTAMP legacy | Giữ kiểu hiện tại; chỉ chuyển sau kiểm tra timezone ghi thực tế; không đoán offset để backfill |
 | Streak/biểu đồ học hiện tại | Local calendar theo ZoneId.systemDefault(); giữ hành vi cũ, ghi rõ khác thiết bị có thể khác ngày |
@@ -384,7 +384,7 @@ Báo cáo tối thiểu: start→complete, complete→pass, số lần thử đ�
 
 **Chuẩn nội dung: Anh–Mỹ (en-US).** IPA, audio/TTS mẫu và ví dụ phải nhất quán. Rà soát 12 từ seed hiện có, đặc biệt các dạng Anh–Anh như dog, bottle, phone, banana; không tự thay bằng regex. V5 không sửa lại: điều chỉnh dữ liệu bằng bản cập nhật nội dung/migration mới khi được phép code.
 
-Ưu tiên voice en-US không yêu cầu mạng nếu có. Nếu thiếu giọng: hướng dẫn cài dữ liệu voice; vẫn cho xem phiên âm, học từ và làm dạng không cần nghe. Không giả phát âm, không ngầm tính câu nghe là đúng hoặc loại khỏi mẫu số để vượt bài. Bài luyện chứa câu nghe chưa thực hiện được giữ dang dở cho đến khi giọng hoạt động; có thể chuyển sang PRACTICE không nghe nhưng PRACTICE không thay kết quả LESSON.
+Ưu tiên voice en-US không yêu cầu mạng nếu có; kiểm Voice.locale và isNetworkConnectionRequired, không chỉ setLanguage. Nếu thiếu giọng: hướng dẫn cài dữ liệu voice; vẫn cho xem phiên âm, học từ và làm dạng không cần nghe. Không giả phát âm, không ngầm tính câu nghe là đúng hoặc loại khỏi mẫu số để vượt bài. **[THAY ĐỔI ĐƯỢC CHỦ DỰ ÁN CHO PHÉP — tuần 7]** Mỗi câu nghe có fallback không cần nghe được đánh dấu rõ trong cùng LESSON, giữ question ID/đáp án/trọng số/mẫu số; người học tự trả lời fallback. Không thêm PRACTICE UI. Hợp đồng chi tiết tại docs/product/week7-plan.md.
 
 TTS test ít nhất ba thiết bị thật, engine/Android khác nhau và có máy cấu hình thấp; bộ 20 từ/10 câu, gồm trọng âm và từ dễ nhầm. Chạy online, airplane mode, thiếu voice, chuyển nền, đổi từ và phát liên tiếp. Ghi engine/voice/thiết bị/version, latency khởi phát, độ rõ, lỗi cắt/dừng và đánh giá người rà soát độc lập. Không tuyên bố đã kiểm chứng offline chỉ vì setLanguage thành công. Chưa thêm cloud TTS hoặc bộ audio có bản quyền mới.
 
@@ -466,7 +466,7 @@ Analytics/camera có thể hoàn tất ở tuần 9 nếu chưa đạt tuần 8;
 | Sửa và kiểm tra trong app | Toàn bộ bộ nội dung | 2–3 |
 | Đệm nội dung | Chờ phản hồi, câu cần viết lại, kiểm tra phát âm | 3–5 |
 
-Tổng nội dung dự kiến **14–23 ngày công**, không phải thời gian code và không mặc định là 14–23 ngày lịch. **Người rà soát phải khác người biên soạn**, có năng lực tiếng Anh phù hợp; AI hỗ trợ không thay thế vòng rà soát độc lập. Mỗi gói có người soạn/người duyệt/ngày/trạng thái; thiếu người duyệt thì chưa xuất bản. Phần chặng đầu cần duyệt trước nghiệm thu tuần 5–6. Nếu cùng người làm code và biên soạn thì cộng công việc, không mặc định song song.
+Tổng nội dung dự kiến **14–23 ngày công**, không phải thời gian code và không mặc định là 14–23 ngày lịch. **Người rà soát phải khác người biên soạn**, có năng lực tiếng Anh phù hợp; AI hỗ trợ không thay thế vòng rà soát độc lập. Mỗi gói có người soạn/người duyệt/ngày/trạng thái; thiếu người duyệt thì chưa xuất bản production. **[ĐÍNH CHÍNH theo quyết định §14]** DEMO đủ cho nghiệm thu kỹ thuật tuần 5–7; gate nội dung REVIEWED phải xong trước tuần 8. Nếu cùng người làm code và biên soạn thì cộng công việc, không mặc định song song.
 
 ## 11. Cấu trúc dự án và guardrails
 
@@ -564,3 +564,89 @@ Sau bước 6 vẫn dừng để chủ dự án duyệt tuần 5; tuần 6 chưa
 **[CẬP NHẬT QUYỀN THỰC HIỆN]** Chủ dự án xác nhận preflight, chỉ có dữ liệu dev thử nghiệm và cho phép bỏ chạy trên database vận hành ở lần này (phải chạy trước triển khai thật). Chỉ thị mới cho phép liên tục bước 1–5, thay các checkpoint chờ sau mỗi bước ở trên: mỗi bước vẫn test trước, đủ regression/Android/backend/PostgreSQL/admin build/lint và commit riêng; dừng nếu test thất bại, phát hiện dữ liệu không hợp lệ, mâu thuẫn với repo hoặc cần đổi hợp đồng. Không gộp main. Sau bước 5 dừng chờ test tay, chưa làm bước 6.
 
 Tham chiếu kỹ thuật/phát hành để kiểm tra lại trước release: [partial unique indexes PostgreSQL](https://www.postgresql.org/docs/current/indexes-partial.html), [Android TTS Voice](https://developer.android.com/reference/android/speech/tts/Voice), [Google Play Data Safety](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en), [account deletion](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en). Các liên kết không là xác nhận app đã tuân thủ.
+
+## 14. [BỔ SUNG — ĐÃ DUYỆT] Hợp đồng tuần 6
+
+Quyết định của chủ dự án: **1A, 2A, 3A, 4A, 5A, 6A**, kèm các điều chỉnh tại mục này. Chỉ làm ba bài chọn nghĩa/offline/session/sync/revision; không thêm dạng bài, TTS, analytics, camera, CMS hoặc thư viện/dịch vụ. Tuần 6 nghiệm thu **kỹ thuật bằng DEMO**; không đồng nghĩa nội dung đã duyệt. Gate REVIEWED phải hoàn tất **trước tuần 8**, người rà soát khác người biên soạn.
+
+### 14.1. Pack bất biến và chấm tạm
+
+- Manifest một chặng liệt kê ba lesson/revision, vị trí, contentStatus, schemaVersion, URL, byteLength và SHA-256 mỗi pack. **[ĐÍNH CHÍNH — 13/10/2026, chủ dự án chọn A]** Locale `en-US` nằm trong `LessonPack.pronunciationLocale`, không nằm trong manifest. Giữ nguyên wire format và manifest hiện có. Pack theo revision, không thêm course version; seed packId khác revisionId của pack tải về.
+- Payload JSON có snapshot từ/mẫu câu, thứ tự questions/options, answerKey và trọng số. Không chứa token/progress/XP của tài khoản. Checksum tính trên bytes ổn định; không đưa trạng thái enrollment hay server time thay đổi vào bytes bất biến.
+- Endpoint manifest/pack yêu cầu đăng nhập. Pack chỉ trả revision PUBLISHED/ARCHIVED hợp lệ; DRAFT hoặc không có revision bị từ chối. Tải revision cũ theo ID cụ thể, không tự đổi session sang bản mới.
+- Tải vào vùng tạm → kiểm tra size/checksum/schema/FK nội bộ → commit toàn pack vào Room. complete=true chỉ sau validation và transaction thành công. Chặng tải đủ khi cả ba pack complete; pack dở không dùng, không thay pack tốt. Không xóa pack còn được session/outbox tham chiếu.
+- Android/backend dùng **cùng hàm chấm thuần trong shared/** và cùng test vectors; có test đối chiếu hai bên, không sao chép hai thuật toán. So sánh số nguyên 70%, phần trăm floor, số đúng/tổng giữ nguyên.
+- Chấm tạm cho mở bài sau offline, ghi rõ chờ server; XP chính thức chỉ từ server. Answer key offline không chống gian lận tuyệt đối. Server chấm lại bằng snapshot/answer key của revision, không tin score hoặc XP client.
+- Ngoài DEMO có fixture định dạng lớn: ba bài, mỗi bài 5–6 từ/10 câu, lựa chọn dài. Fixture chỉ test format, không được tự nhập production hoặc coi là REVIEWED.
+
+### 14.2. Room v4 — mọi bảng mới theo account
+
+Migration duy nhất **3→4**, chỉ thêm bảng/index; giữ nguyên bảng cũ, MIGRATION_1_2/MIGRATION_2_3, tên learning.db, DataStore và TokenCipher. Không destructive fallback; commit schema JSON v4, không sửa JSON v1–v3.
+
+UUID/JSON/status là TEXT; epoch ms/account/position/count/boolean là INTEGER. Các trường bắt buộc NOT NULL, trường chưa có giá trị được nêu nullable.
+
+| Bảng | PK / fields | Constraints và index |
+| --- | --- | --- |
+| ContentPack | PK(accountId, revisionId); lessonId, courseId, schemaVersion, manifestJson, contentJson, checksum, byteLength, downloadedAt, complete | accountId dương; revision/account cùng nguồn; đọc chỉ khi complete; bất biến sau complete; không chia sẻ hàng dữ liệu giữa account |
+| LessonSession | PK(accountId, id); id cũng là attempt UUID; lessonId, revisionId, mode, questionOrderJson, position, answersJson, phase, startedAt, updatedAt; frozenPayloadJson/serverResultJson nullable | FK(accountId, revisionId)→ContentPack NO ACTION; index(accountId, phase); một session không chuyển account/revision/UUID; payload bất biến sau enqueue |
+| LessonAttemptOutbox | PK(accountId, attemptId); sessionId, payloadJson, payloadHash, state, queuedAt, retryCount; lastError nullable | FK(accountId, sessionId)→LessonSession NO ACTION; UQ(accountId, sessionId); index(accountId, state, queuedAt); không dùng OutboxOperation cũ |
+| CurriculumAccountState | PK(accountId, courseId); enrollmentStatus, confirmedProgressJson, confirmedXpTotal; lastConfirmedAt nullable | Snapshot server theo account; không đưa progress tạm vào confirmed; không reset khi mất mạng |
+
+Đăng xuất **không xóa** session/pack/outbox chờ; chỉ dừng sync account đó. Mọi đọc/ghi và FK phải account-scoped; kiểm tra account trước network dispatch và trước lưu response. Tuần 8 sẽ thiết kế/xử lý xóa dữ liệu theo account trong luồng xóa tài khoản; không thêm API xóa ở tuần 6.
+
+Migration test mở DB v3 trên đĩa có đủ hai account, words/cache/learning events, review cards/events/session, outbox pending/blocked, SyncAccount. So từng dòng/sequence/UUID/payload trước–sau; kiểm tra cả 1→4, 2→4, 3→4 và Room mở/ghi schema mới. Token/profile DataStore có test nâng cấp riêng, không tuyên bố migration SQL chuyển SavedStateHandle.
+
+### 14.3. Session và queue riêng
+
+- Room là nguồn durable; UUID ghi trước học/gửi. Lưu answers/vị trí/phase sau mỗi thao tác, UI chỉ xác nhận đã lưu sau commit. Session resume giữ revision; mở session mới mới chọn revision mới.
+- Nộp: đóng băng payload, timestamp/cờ submittedOffline và enqueue cùng transaction. Cả online/offline đi đường durable này. Không đổi payload khi retry, kể cả khi có mạng trở lại.
+- Giữ clientCompletedAt **epoch milliseconds**, mapper backend chuyển Instant/TIMESTAMPTZ; received_at server riêng. Giữ validation timestamp dương/giới hạn tương lai hiện có; không hạn sync trễ 72 giờ.
+- LessonAttemptOutbox riêng, dùng WorkManager/scheduler hiện có; xử lý độc lập với queue learning/review. Queue lesson gửi theo thứ tự phụ thuộc bài; một queue bị chặn không chặn queue kia.
+- Trạng thái local: PENDING (chờ gửi), WAITING_PREREQUISITE (server đã ghi attempt, chờ bài trước), BLOCKED (lỗi vĩnh viễn, giữ dữ liệu), CONFIRMED (server xác nhận; result và acknowledge cùng transaction). Không cần ghi trạng thái SENDING để bỏ quên job khi crash; timeout/restart giữ hàng và UUID.
+- Network/408/429/5xx retry/backoff; 401 tạm dừng chờ đăng nhập; 409 ATTEMPT_PAYLOAD_CONFLICT và lỗi dữ liệu vĩnh viễn vào BLOCKED, giữ payload/error, không tự tạo UUID mới. Mỗi retry dùng token đúng account hiện tại.
+
+**[CỤ THỂ HÓA — bước 5]** LessonSyncGateway dùng POST lesson-attempts hiện có và GET `/api/v1/curriculum/courses/{id}/state` để lấy enrollmentStatus/progress/XP **đã xác nhận theo course/account**. Request sync luôn có X-LingoLens-Account; interceptor/authenticator hiện có kiểm trước dispatch/refresh, server kiểm header với principal, mismatch trả 403/ACCOUNT_MISMATCH. Header tùy chọn cho client tuần 5 cũ; payload attempt không thêm trường account. Snapshot không có progress từ pending; xác nhận local result, snapshot và acknowledge trong cùng transaction. Nếu response mất hoặc local commit lỗi, giữ UUID/payload để retry; không cộng XP từ result vào tổng local. SyncCoordinator gọi cả queue library/review và queue lesson dù một queue BLOCKED/retry, dùng worker/network constraint/backoff hiện có. Tải đủ pack hợp lệ schedule pull trạng thái; tải dở không schedule. Logout giữ outbox, account deletion vẫn thuộc tuần 8.
+
+### 14.4. Server ghi attempt và progress có điều kiện
+
+- Mọi attempt hợp lệ được chấm/ghi answers dù bài sau đến trước bài trước. Hợp lệ gồm identity, enrollment, revision PUBLISHED/ARCHIVED, mode, timestamps, đầy đủ questions/options và UUID/hash không xung đột. Payload không hợp lệ không có quyền được ghi như attempt hợp lệ.
+- Bài trước chưa được công nhận: **HTTP 202**, code **LESSON_PREREQUISITE_PENDING**, confirmationStatus=WAITING_PREREQUISITE, retryable=true. Ghi attempt/answers nguyên tử; chưa ghi progress/XP. Retry cùng UUID đánh giá lại điều kiện; không insert attempt mới. Pending không trở thành BLOCKED chỉ vì đợi lâu.
+- Khi điều kiện đủ: confirmationStatus=CONFIRMED; grade/answers không đổi, progress/XP được xác nhận nguyên tử, thưởng tối đa một lần/lesson. Retry confirmed giữ kết quả. Pending→confirmed là chuyển trạng thái có chủ đích, không xem lần đầu 202 là kết quả thưởng cuối cùng bất biến.
+- Từ chối vĩnh viễn có code rõ và retryable=false: ATTEMPT_PAYLOAD_CONFLICT (409), LESSON_REVISION_UNAVAILABLE (404), LESSON_REQUEST_INVALID (400). Không trả payload/owner của account khác. Auth expiry không phải lỗi nội dung vĩnh viễn.
+- Test PostgreSQL bắt buộc: bài 2 đến trước bài 1 vẫn có attempt/answers, không progress/XP; sau bài 1, retry UUID bài 2 xác nhận một lần; concurrent pending retries và hai UUID vẫn không nhân đôi thưởng; invalid payload BLOCKED không ghi dở. Bài trượt đã đủ prerequisite được CONFIRMED nhưng không mở khóa/thưởng.
+- Revision cũ archived giữ để nộp, không deadline MVP. XP/progress theo lesson ID ổn định; revision mới không thưởng lại. Nếu cần trạng thái confirmation persistence, chỉ thêm migration mới sau V12; không sửa V1–V12.
+
+**[BỔ SUNG — tuần 6 bước 3] V13: attempt confirmation bền vững.** Thêm duy nhất `lesson_attempts.confirmation_status VARCHAR(30) NOT NULL DEFAULT 'CONFIRMED'`, CHECK chỉ cho CONFIRMED/WAITING_PREREQUISITE. Attempt tuần 5 được đọc là CONFIRMED; không đổi điểm/answers/hash/timestamp/progress/XP/enrollment. Schema cũ không có dấu xác nhận riêng, không được suy đoán trạng thái qua việc có/không có XP hoặc progress (PRACTICE, bài trượt và nhiều attempts có thể cùng không có XP). V13 chỉ cộng thêm cột/ràng buộc; không xóa/đổi kiểu cột cũ, không UPDATE backfill thủ công. PostgreSQL 15 dùng fast constant default, tránh rewrite heap; DDL vẫn cần khóa và CHECK có thể quét dữ liệu. Test nâng cấp V12 có dữ liệu phải so toàn bộ cột cũ từng dòng, checksum history, partial unique indexes và filenode heap trước/sau.
+
+| Migration backend | Mục đích và phạm vi |
+| --- | --- |
+| V1–V8 | Nền tảng tuần 1–4; bất biến |
+| V9 | learner_settings/backfill/profile compatibility; bất biến |
+| V10 | Curriculum/revisions/snapshots/questions và partial unique PUBLISHED; bất biến |
+| V11 | Enrollment/attempt/answers/progress/XP và partial unique ACTIVE; bất biến |
+| V12 | Provenance/import receipt, không chứa DEMO; bất biến |
+| **V13 mới** | Chỉ thêm confirmation_status/default/check vào lesson_attempts để retry pending qua restart/transaction; không thay nội dung/điểm/XP cũ |
+
+Checksum SHA-256 LF của nguồn V1–V12 (SQL, Kotlin migration và SQL resources) được đối chiếu với inventory cố định; V13 ghi checksum riêng trong `docs/portfolio/week6-migration-checksums.json`. Flyway validate/history checksum vẫn phải đạt. Kiểm tra này bảo vệ tính bất biến của nguồn/history, không thay thế test hành vi hoặc kiểm chứng dữ liệu mục tiêu trước triển khai.
+
+### 14.5. UUID cũ, lỗi admin và điểm dừng
+
+- UUID mất trước tuần 6 không được suy đoán gộp/xóa attempt. Không thêm API đối soát, **không chuyển payload SavedStateHandle sang Room khi nâng cấp**. Attempt/session tuần 6 mới dùng Room; unique XP bảo vệ lượt học mới cùng lesson.
+- Admin xóa vocabulary có lesson tham chiếu: làm **409 + thông báo** ở bước 3, test PostgreSQL/HTTP; không cascade xóa vocabulary/snapshot/bài.
+
+| Bước | Phạm vi | Test trước / kiểm chứng |
+| --- | --- | --- |
+| 0 | Cập nhật hợp đồng, baseline toàn bộ, inventory/checksum schema/migration | Android/backend/PostgreSQL/lint/admin build; ghi số thực tế |
+| 1 | Room v4, entities/DAO/migration, commit JSON v4 | Database cũ có dữ liệu, account/FK, transaction; **dừng báo cáo và chờ tiếp tục** |
+| 2 | Manifest/pack authenticated, downloader, shared grader/vectors/fixture lớn | Pack invalid/incomplete/checksum/archive/DRAFT, đối chiếu chấm Android/backend |
+| 3 | Backend offline/pending/confirmed và admin delete 409 | PostgreSQL prerequisites, concurrency, atomic/rollback, ownership/revision |
+| 4 | Durable session/outbox | Crash trước/sau enqueue, immutable retry, resume/account switch |
+| 5 | Sync/reconnect, scheduler | Lost response, queue độc lập, auth/account fence; **dừng báo cáo và chờ tiếp tục** |
+| **6 — được duyệt sau bước 5** | Nối repository Room/sync vào UI cả ba bài; tải chặng, resume, kết quả tạm/xác nhận/BLOCKED, giữ đáp án | Test UI model/Room trước; đủ regression/lint/build APK; **dừng cho chủ dự án test thiết bị, chưa làm bước 7 hoặc mở PR** |
+| **7 — được duyệt nghiệm thu kỹ thuật ngày 13/10** | Đối chiếu tiêu chí và mở PR sau gate regression chung; chủ dự án bỏ checkpoint test tay trước PR | Process death, vuốt tắt/reboot, upgrade APK không uninstall, hai account trên thiết bị vẫn ghi đạt một phần; không lấy Robolectric thay instrumentation. Ma trận/test/timestamp tại docs/portfolio/week6-step7.md; không merge main |
+
+Mỗi bước một commit trên nhánh riêng, test quan trọng viết trước; đủ Android/backend/postgresTest/lint gate baseline 38/admin build sau mỗi bước. **Dừng ngay nếu test fail hoặc cần đổi hợp đồng**; không sửa tạm để đi tiếp. Quyền làm liên tục có checkpoint bắt buộc sau bước 1, rồi mới tiếp tục bước 2–5 khi chủ dự án nói tiếp tục; không merge main. **[CẬP NHẬT — bước 6]** Chủ dự án đã duyệt bước 6 riêng: UI hiển thị số đúng/tổng, progress tạm có nhãn chờ server, XP chỉ lấy snapshot đã xác nhận; phiên BLOCKED giữ đáp án/payload và mã lỗi, không tự tạo UUID/gửi lại. Chưa có PRACTICE UI. Test tay và lệnh cài/backup tại `docs/product/week6-testing.md`. **[CẬP NHẬT 13/10 — bước 7]** Chủ dự án bỏ checkpoint test tay, gate kỹ thuật đã đạt; PR #4 đang mở, chưa merge. Bằng chứng thiết bị vẫn đạt một phần.
+
+## 15. [BỔ SUNG — TUẦN 7] Ba dạng bài và TTS/fallback
+
+Chủ dự án cho thực hiện liên tục tuần 7 sau gate/PR tuần 6, không merge. Hợp đồng, các bước nhỏ, rủi ro và **Giả định chờ chủ dự án xác nhận** tại [week7-plan.md](week7-plan.md). Phạm vi chỉ MEANING_CHOICE/LISTEN_CHOICE/FILL_GAP, TTS en-US theo thuộc tính Voice, fallback cùng câu và phản hồi/luyện câu sai; không PRACTICE UI hoặc việc tuần 8–9. Nội dung mới trọng số bằng nhau/10 câu, tối đa hai câu nghe mỗi bài; shared grader/vectors mở rộng nhưng giữ revision/vector/queue cũ. Không sửa V1–V13/schema Room v1–v4; kế hoạch hiện không cần migration hoặc thư viện/dịch vụ mới.
