@@ -25,6 +25,7 @@ import java.util.UUID
 @SpringBootTest @AutoConfigureMockMvc @ActiveProfiles("test") @Testcontainers @Tag("postgres")
 class ContentPackPostgresTests {
     @Autowired lateinit var service: ContentPackService
+    @Autowired lateinit var codec: PackWireCodec
     @Autowired lateinit var jdbc: JdbcTemplate
     @Autowired lateinit var mockMvc: MockMvc
     private val mapper=jacksonObjectMapper()
@@ -63,10 +64,33 @@ class ContentPackPostgresTests {
         assertEquals(3,fixture.size())
         fixture.forEach { body ->
             val pack=mapper.treeToValue(body,com.quocdat.lingolens.assessment.core.LessonPack::class.java)
-            val roundTrip=mapper.readTree(mapper.writeValueAsBytes(pack))
+            val roundTrip=mapper.readTree(codec.encode(pack))
             assertEquals(body,roundTrip)
             assertEquals(10,pack.questions.size); assertEquals(6,pack.vocabularies.size)
             assertTrue(pack.questions.all { q -> q.options.all { it.label.length>200 } })
+        }
+    }
+    @Test fun `week6 published and archived pack bytes equal frozen pre week7 golden`() {
+        seed()
+        val goldenManifest=mapper.readTree(requireNotNull(javaClass.getResourceAsStream("/curriculum/legacy-week6-packs/manifest.json")))
+        assertEquals("c339c4ee751316760b9c518f2ea0cd6e96f82530",goldenManifest["sourceCommit"].asText())
+        val captured=goldenManifest["packs"].toList()
+        assertEquals(3,captured.size)
+        val manifest=service.manifest(course)
+        assertEquals(captured.map{it["revisionId"].asText()}.toSet(),manifest.lessons.map{it.revisionId}.toSet())
+        manifest.lessons.forEach { reference ->
+            val expected=captured.single{it["revisionId"].asText()==reference.revisionId}
+            val golden=requireNotNull(javaClass.getResourceAsStream("/curriculum/legacy-week6-packs/"+reference.revisionId+".json")).use{it.readBytes()}
+            val checksum=MessageDigest.getInstance("SHA-256").digest(golden).joinToString(""){"%02x".format(it)}
+            assertEquals(expected["byteLength"].asLong(),golden.size.toLong())
+            assertEquals(expected["checksum"].asText(),checksum)
+            assertEquals(expected["byteLength"].asLong(),reference.byteLength)
+            assertEquals(expected["checksum"].asText(),reference.checksum)
+            val revision=UUID.fromString(reference.revisionId)
+            assertArrayEquals(golden,service.pack(revision))
+            assertEquals(1,jdbc.update("UPDATE lesson_revisions SET status='ARCHIVED' WHERE id=?",revision))
+            try { assertArrayEquals(golden,service.pack(revision)) }
+            finally { assertEquals(1,jdbc.update("UPDATE lesson_revisions SET status='PUBLISHED' WHERE id=?",revision)) }
         }
     }
     companion object {
@@ -77,3 +101,4 @@ class ContentPackPostgresTests {
         }
     }
 }
+

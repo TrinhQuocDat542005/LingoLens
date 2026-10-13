@@ -11,7 +11,7 @@ import java.security.MessageDigest
 import java.util.UUID
 
 @Service
-class ContentPackService(private val jdbc: JdbcTemplate, private val mapper: ObjectMapper) {
+class ContentPackService(private val jdbc: JdbcTemplate, private val mapper: ObjectMapper, private val codec: PackWireCodec) {
     @Transactional(readOnly=true)
     fun manifest(course: UUID): PackManifest {
         val rows=jdbc.queryForList("SELECT r.id,l.id lesson_id,l.title,l.position,r.content_status FROM lesson_revisions r JOIN lessons l ON l.id=r.lesson_id JOIN course_units u ON u.id=l.unit_id JOIN courses c ON c.id=u.course_id WHERE c.id=? AND c.status='PUBLISHED' AND r.status='PUBLISHED' ORDER BY u.position,l.position",course)
@@ -35,8 +35,9 @@ class ContentPackService(private val jdbc: JdbcTemplate, private val mapper: Obj
         val body=LessonPack(1,row["course_id"].toString(),row["lesson_id"].toString(),revision.toString(),row["title"].toString(),row["introduction"].toString(),row["content_status"].toString(),"en-US",(row["position"] as Number).toInt(),
             mapper.readTree(row["sentence_patterns"].toString()).map { mapper.treeToValue(it,PackedPattern::class.java) },
             jdbc.queryForList("SELECT content_snapshot::text FROM lesson_vocabularies WHERE lesson_revision_id=? ORDER BY position",String::class.java,revision).map { mapper.readValue(it,PackedWord::class.java) },questions)
-        return mapper.writeValueAsBytes(body)
+        return codec.encode(body)
     }
     private fun hash(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun unavailable(): Nothing = throw LessonRequestException(HttpStatus.NOT_FOUND,"LESSON_REVISION_UNAVAILABLE","Published content unavailable")
 }
+
