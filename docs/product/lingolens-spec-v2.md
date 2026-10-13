@@ -1,6 +1,6 @@
 # LingoLens — Đặc tả sản phẩm và kiến trúc v2
 
-**Trạng thái:** chủ dự án đã duyệt preflight và cho phép thực hiện liên tục **bước 1–5 của tuần 5** trên một nhánh riêng. Mỗi bước một commit và chạy đủ regression/build/lint; test thất bại thì dừng báo cáo. Sau bước 5 dừng để chủ dự án test app; bước 6 và tuần 6 trở đi chưa được phép triển khai.
+**Trạng thái cập nhật 13/10/2026:** tuần 6 đạt gate kỹ thuật bước 7, PR #4 đang mở và chưa merge; bằng chứng thiết bị vẫn đạt một phần. Chủ dự án cho tiếp tục tuần 7 trên nhánh feature/question-types-tts theo mục 15; test fail/lint tăng hoặc hợp đồng cần đổi thì dừng. Không tự làm tuần 8–9.
 
 **Căn cứ:** đặc tả ban đầu trong cuộc trò chuyện, đối chiếu migration V1–V8, Room v3 và quyết định **1A, 2A, 3A, 4A, 5A, 6A**, cùng các bổ sung của chủ dự án. Tài liệu này là đặc tả đích, không phải báo cáo tính năng đã triển khai.
 
@@ -384,7 +384,7 @@ Báo cáo tối thiểu: start→complete, complete→pass, số lần thử đ�
 
 **Chuẩn nội dung: Anh–Mỹ (en-US).** IPA, audio/TTS mẫu và ví dụ phải nhất quán. Rà soát 12 từ seed hiện có, đặc biệt các dạng Anh–Anh như dog, bottle, phone, banana; không tự thay bằng regex. V5 không sửa lại: điều chỉnh dữ liệu bằng bản cập nhật nội dung/migration mới khi được phép code.
 
-Ưu tiên voice en-US không yêu cầu mạng nếu có. Nếu thiếu giọng: hướng dẫn cài dữ liệu voice; vẫn cho xem phiên âm, học từ và làm dạng không cần nghe. Không giả phát âm, không ngầm tính câu nghe là đúng hoặc loại khỏi mẫu số để vượt bài. Bài luyện chứa câu nghe chưa thực hiện được giữ dang dở cho đến khi giọng hoạt động; có thể chuyển sang PRACTICE không nghe nhưng PRACTICE không thay kết quả LESSON.
+Ưu tiên voice en-US không yêu cầu mạng nếu có; kiểm Voice.locale và isNetworkConnectionRequired, không chỉ setLanguage. Nếu thiếu giọng: hướng dẫn cài dữ liệu voice; vẫn cho xem phiên âm, học từ và làm dạng không cần nghe. Không giả phát âm, không ngầm tính câu nghe là đúng hoặc loại khỏi mẫu số để vượt bài. **[THAY ĐỔI ĐƯỢC CHỦ DỰ ÁN CHO PHÉP — tuần 7]** Mỗi câu nghe có fallback không cần nghe được đánh dấu rõ trong cùng LESSON, giữ question ID/đáp án/trọng số/mẫu số; người học tự trả lời fallback. Không thêm PRACTICE UI. Hợp đồng chi tiết tại docs/product/week7-plan.md.
 
 TTS test ít nhất ba thiết bị thật, engine/Android khác nhau và có máy cấu hình thấp; bộ 20 từ/10 câu, gồm trọng âm và từ dễ nhầm. Chạy online, airplane mode, thiếu voice, chuyển nền, đổi từ và phát liên tiếp. Ghi engine/voice/thiết bị/version, latency khởi phát, độ rõ, lỗi cắt/dừng và đánh giá người rà soát độc lập. Không tuyên bố đã kiểm chứng offline chỉ vì setLanguage thành công. Chưa thêm cloud TTS hoặc bộ audio có bản quyền mới.
 
@@ -466,7 +466,7 @@ Analytics/camera có thể hoàn tất ở tuần 9 nếu chưa đạt tuần 8;
 | Sửa và kiểm tra trong app | Toàn bộ bộ nội dung | 2–3 |
 | Đệm nội dung | Chờ phản hồi, câu cần viết lại, kiểm tra phát âm | 3–5 |
 
-Tổng nội dung dự kiến **14–23 ngày công**, không phải thời gian code và không mặc định là 14–23 ngày lịch. **Người rà soát phải khác người biên soạn**, có năng lực tiếng Anh phù hợp; AI hỗ trợ không thay thế vòng rà soát độc lập. Mỗi gói có người soạn/người duyệt/ngày/trạng thái; thiếu người duyệt thì chưa xuất bản. Phần chặng đầu cần duyệt trước nghiệm thu tuần 5–6. Nếu cùng người làm code và biên soạn thì cộng công việc, không mặc định song song.
+Tổng nội dung dự kiến **14–23 ngày công**, không phải thời gian code và không mặc định là 14–23 ngày lịch. **Người rà soát phải khác người biên soạn**, có năng lực tiếng Anh phù hợp; AI hỗ trợ không thay thế vòng rà soát độc lập. Mỗi gói có người soạn/người duyệt/ngày/trạng thái; thiếu người duyệt thì chưa xuất bản production. **[ĐÍNH CHÍNH theo quyết định §14]** DEMO đủ cho nghiệm thu kỹ thuật tuần 5–7; gate nội dung REVIEWED phải xong trước tuần 8. Nếu cùng người làm code và biên soạn thì cộng công việc, không mặc định song song.
 
 ## 11. Cấu trúc dự án và guardrails
 
@@ -645,4 +645,8 @@ Checksum SHA-256 LF của nguồn V1–V12 (SQL, Kotlin migration và SQL resour
 | **6 — được duyệt sau bước 5** | Nối repository Room/sync vào UI cả ba bài; tải chặng, resume, kết quả tạm/xác nhận/BLOCKED, giữ đáp án | Test UI model/Room trước; đủ regression/lint/build APK; **dừng cho chủ dự án test thiết bị, chưa làm bước 7 hoặc mở PR** |
 | **7 — được duyệt nghiệm thu kỹ thuật ngày 13/10** | Đối chiếu tiêu chí và mở PR sau gate regression chung; chủ dự án bỏ checkpoint test tay trước PR | Process death, vuốt tắt/reboot, upgrade APK không uninstall, hai account trên thiết bị vẫn ghi đạt một phần; không lấy Robolectric thay instrumentation. Ma trận/test/timestamp tại docs/portfolio/week6-step7.md; không merge main |
 
-Mỗi bước một commit trên nhánh riêng, test quan trọng viết trước; đủ Android/backend/postgresTest/lint gate baseline 38/admin build sau mỗi bước. **Dừng ngay nếu test fail hoặc cần đổi hợp đồng**; không sửa tạm để đi tiếp. Quyền làm liên tục có checkpoint bắt buộc sau bước 1, rồi mới tiếp tục bước 2–5 khi chủ dự án nói tiếp tục; không merge main. **[CẬP NHẬT — bước 6]** Chủ dự án đã duyệt bước 6 riêng: UI hiển thị số đúng/tổng, progress tạm có nhãn chờ server, XP chỉ lấy snapshot đã xác nhận; phiên BLOCKED giữ đáp án/payload và mã lỗi, không tự tạo UUID/gửi lại. Chưa có PRACTICE UI. Test tay và lệnh cài/backup tại `docs/product/week6-testing.md`; bước 7/PR vẫn chờ kết quả chủ dự án.
+Mỗi bước một commit trên nhánh riêng, test quan trọng viết trước; đủ Android/backend/postgresTest/lint gate baseline 38/admin build sau mỗi bước. **Dừng ngay nếu test fail hoặc cần đổi hợp đồng**; không sửa tạm để đi tiếp. Quyền làm liên tục có checkpoint bắt buộc sau bước 1, rồi mới tiếp tục bước 2–5 khi chủ dự án nói tiếp tục; không merge main. **[CẬP NHẬT — bước 6]** Chủ dự án đã duyệt bước 6 riêng: UI hiển thị số đúng/tổng, progress tạm có nhãn chờ server, XP chỉ lấy snapshot đã xác nhận; phiên BLOCKED giữ đáp án/payload và mã lỗi, không tự tạo UUID/gửi lại. Chưa có PRACTICE UI. Test tay và lệnh cài/backup tại `docs/product/week6-testing.md`. **[CẬP NHẬT 13/10 — bước 7]** Chủ dự án bỏ checkpoint test tay, gate kỹ thuật đã đạt; PR #4 đang mở, chưa merge. Bằng chứng thiết bị vẫn đạt một phần.
+
+## 15. [BỔ SUNG — TUẦN 7] Ba dạng bài và TTS/fallback
+
+Chủ dự án cho thực hiện liên tục tuần 7 sau gate/PR tuần 6, không merge. Hợp đồng, các bước nhỏ, rủi ro và **Giả định chờ chủ dự án xác nhận** tại [week7-plan.md](week7-plan.md). Phạm vi chỉ MEANING_CHOICE/LISTEN_CHOICE/FILL_GAP, TTS en-US theo thuộc tính Voice, fallback cùng câu và phản hồi/luyện câu sai; không PRACTICE UI hoặc việc tuần 8–9. Nội dung mới trọng số bằng nhau/10 câu, tối đa hai câu nghe mỗi bài; shared grader/vectors mở rộng nhưng giữ revision/vector/queue cũ. Không sửa V1–V13/schema Room v1–v4; kế hoạch hiện không cần migration hoặc thư viện/dịch vụ mới.
