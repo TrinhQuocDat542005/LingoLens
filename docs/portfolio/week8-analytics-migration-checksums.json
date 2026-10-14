@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "path": "backend/src/main/kotlin/db/migration/V15__analytics_consent_events.kt",
+      "sha256Lf": "7cddae45e8bc0dde5fe1b2117dd5b9d713e16e1fe98398925ef5dc2c3115fd0c"
+    },
+    {
+      "path": "backend/src/main/resources/db/content-schema/V15.sql",
+      "sha256Lf": "db75ce67ab88fb3b8e70cea48e626e16cca2e3ea809cc6b3880b7602434df337"
+    },
+    {
+      "path": "backend/src/main/resources/db/content-schema/V15-postgres.sql",
+      "sha256Lf": "7fc9ba6641c5b4f3362dd89597ad2741233a9637a0005bc23d39af594afd37b9"
+    }
+  ],
+  "normalization": "UTF-8 LF",
+  "migration": 15
+}

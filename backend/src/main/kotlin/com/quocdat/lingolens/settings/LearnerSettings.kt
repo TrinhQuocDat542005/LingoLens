@@ -17,7 +17,11 @@ class LearnerSettings(
     @Column(name = "daily_review_goal", nullable = false) var dailyReviewGoal: Short = 10,
     @Column(length = 64) var timezone: String? = null,
     @Column(name = "onboarding_completed_at") var onboardingCompletedAt: Instant? = null,
-    @Column(name = "updated_at", nullable = false) var updatedAt: Instant = Instant.now()
+    @Column(name = "updated_at", nullable = false) var updatedAt: Instant = Instant.now(),
+    @Column(name = "analytics_opt_in", nullable = false) var analyticsOptIn: Boolean = false,
+    @Column(name = "analytics_consent_version", length = 30) var analyticsConsentVersion: String? = null,
+    @Column(name = "analytics_consent_at") var analyticsConsentAt: Instant? = null,
+    @Column(name = "analytics_consent_revision", nullable = false) var analyticsConsentRevision: Long = 0
 )
 
 interface LearnerSettingsRepository : JpaRepository<LearnerSettings, Long>

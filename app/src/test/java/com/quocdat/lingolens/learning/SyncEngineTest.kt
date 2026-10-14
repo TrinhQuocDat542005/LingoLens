@@ -32,7 +32,7 @@ class SyncEngineTest {
     private var signedIn = 1L
     private fun open() {
         db = Room.databaseBuilder(context, LearningDatabase::class.java, "sync-test.db")
-            .addMigrations(LearningDatabase.MIGRATION_1_2, LearningDatabase.MIGRATION_2_3, LearningDatabase.MIGRATION_3_4).allowMainThreadQueries().build()
+            .addMigrations(LearningDatabase.MIGRATION_1_2, LearningDatabase.MIGRATION_2_3, LearningDatabase.MIGRATION_3_4, LearningDatabase.MIGRATION_4_5).allowMainThreadQueries().build()
         learning = LearningRepository(db)
     }
     @Before fun setup() = runBlocking { context.deleteDatabase("sync-test.db"); open(); db.syncDao().saveAccount(SyncAccount(1, true)) }

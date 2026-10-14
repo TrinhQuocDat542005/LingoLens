@@ -25,7 +25,7 @@ class ReviewRepositoryTest {
     private lateinit var learning: LearningRepository
     private fun open() {
         db = Room.databaseBuilder(context, LearningDatabase::class.java, "review.db")
-            .addMigrations(LearningDatabase.MIGRATION_1_2, LearningDatabase.MIGRATION_2_3, LearningDatabase.MIGRATION_3_4).allowMainThreadQueries().build()
+            .addMigrations(LearningDatabase.MIGRATION_1_2, LearningDatabase.MIGRATION_2_3, LearningDatabase.MIGRATION_3_4, LearningDatabase.MIGRATION_4_5).allowMainThreadQueries().build()
         review = ReviewRepository(db); learning = LearningRepository(db)
     }
     @Before fun before() { context.deleteDatabase("review.db"); open() }

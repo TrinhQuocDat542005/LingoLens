@@ -57,13 +57,26 @@ interface SyncDao {
 
 @Database(entities = [SavedWordEntity::class, LearningEvent::class, VocabularyCache::class, OutboxOperation::class, SyncAccount::class,
     ReviewCard::class, ReviewEvent::class, ReviewSession::class, ContentPack::class, LessonSession::class,
-    LessonAttemptOutbox::class, CurriculumAccountState::class], version = 4, exportSchema = true)
+    LessonAttemptOutbox::class, CurriculumAccountState::class, AnalyticsConsentState::class, AnalyticsOutbox::class,
+    TopicCache::class, TopicVocabularyCache::class], version = 5, exportSchema = true)
 abstract class LearningDatabase : RoomDatabase() {
     abstract fun learningDao(): LearningDao
     abstract fun syncDao(): SyncDao
     abstract fun reviewDao(): ReviewDao
     abstract fun lessonDao(): LessonDao
+    abstract fun analyticsDao(): AnalyticsDao
+    abstract fun topicDao(): TopicDao
     companion object {
+        val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS AnalyticsConsentState (accountId INTEGER NOT NULL PRIMARY KEY, enabled INTEGER NOT NULL, consentVersion TEXT, consentRevision INTEGER NOT NULL, consentAt INTEGER, pendingOptOut INTEGER NOT NULL, updatedAt INTEGER NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS AnalyticsOutbox (accountId INTEGER NOT NULL, eventId TEXT NOT NULL, eventName TEXT NOT NULL, sessionId TEXT, attemptId TEXT, occurredAt INTEGER NOT NULL, timezone TEXT NOT NULL, appVersion TEXT NOT NULL, propertiesJson TEXT NOT NULL, payloadHash TEXT NOT NULL, consentRevision INTEGER NOT NULL, state TEXT NOT NULL, retryCount INTEGER NOT NULL, queuedAt INTEGER NOT NULL, lastError TEXT, PRIMARY KEY(accountId,eventId), FOREIGN KEY(accountId) REFERENCES AnalyticsConsentState(accountId) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_AnalyticsOutbox_accountId_state_queuedAt ON AnalyticsOutbox(accountId,state,queuedAt)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS TopicCache (id TEXT NOT NULL PRIMARY KEY, slug TEXT NOT NULL, title TEXT NOT NULL, version INTEGER NOT NULL, fetchedAt INTEGER NOT NULL)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_TopicCache_slug ON TopicCache(slug)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS TopicVocabularyCache (topicId TEXT NOT NULL, word TEXT NOT NULL, displayOrder INTEGER NOT NULL, PRIMARY KEY(topicId,word), FOREIGN KEY(topicId) REFERENCES TopicCache(id) ON UPDATE NO ACTION ON DELETE CASCADE)")
+            }
+        }
         val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS ContentPack (accountId INTEGER NOT NULL, revisionId TEXT NOT NULL, lessonId TEXT NOT NULL, courseId TEXT NOT NULL, schemaVersion INTEGER NOT NULL, manifestJson TEXT NOT NULL, contentJson TEXT NOT NULL, checksum TEXT NOT NULL, byteLength INTEGER NOT NULL, downloadedAt INTEGER NOT NULL, complete INTEGER NOT NULL, PRIMARY KEY(accountId, revisionId))")

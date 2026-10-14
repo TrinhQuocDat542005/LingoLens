@@ -135,6 +135,38 @@ class LessonSyncEngineTest {
         assertNull(db.lessonDao().session(2,session.id));assertTrue(db.lessonDao().pending(2).isEmpty())
         assertEquals(0,db.lessonDao().curriculum(2,packs[0].courseId)!!.confirmedXpTotal)
     }
+    @Test fun `revoked refresh pauses without clearing Room and login resumes same frozen attempt`()=runBlocking {
+        val session=enqueue(0);val beforeQueue=db.lessonDao().outbox(1,session.id);val beforeSession=db.lessonDao().session(1,session.id)
+        db.learningDao().save(SavedWordEntity(1,"book","{}",1000))
+        val store=object:CredentialStore {
+            var value:StoredSession?=StoredSession("legacy-access","revoked-refresh","owner@example.invalid","Owner")
+            override suspend fun current()=value
+            override suspend fun cachedProfile()=value?.let{com.quocdat.lingolens.data.remote.dto.UserProfileDto(1,it.email,it.name,"B1",0,5,emptyList())}
+            override suspend fun saveRefreshed(expected:StoredSession,tokens:com.quocdat.lingolens.data.remote.dto.TokenDto)=error("revoked")
+            override suspend fun clearIfCurrent(expected:StoredSession){if(value==expected){value=null;signedIn=0}}
+        }
+        var refreshCalls=0
+        val api=object:com.quocdat.lingolens.data.remote.api.AuthApi {
+            override suspend fun refresh(request:com.quocdat.lingolens.data.remote.dto.RefreshRequest):com.quocdat.lingolens.data.remote.dto.ApiEnvelope<com.quocdat.lingolens.data.remote.dto.TokenDto>{
+                refreshCalls++;throw HttpException(Response.error<Any>(401,"{\"code\":\"INVALID_TOKEN\"}".toResponseBody()))}
+            override suspend fun register(request:com.quocdat.lingolens.data.remote.dto.RegisterRequest):com.quocdat.lingolens.data.remote.dto.ApiEnvelope<com.quocdat.lingolens.data.remote.dto.UserProfileDto> = error("unused")
+            override suspend fun login(request:com.quocdat.lingolens.data.remote.dto.LoginRequest):com.quocdat.lingolens.data.remote.dto.ApiEnvelope<com.quocdat.lingolens.data.remote.dto.TokenDto> = error("unused")
+            override suspend fun logout(request:com.quocdat.lingolens.data.remote.dto.LogoutRequest):com.quocdat.lingolens.data.remote.dto.ApiEnvelope<Unit> = error("unused")
+            override suspend fun logoutAll():com.quocdat.lingolens.data.remote.dto.ApiEnvelope<Unit> = error("unused")
+        }
+        val unauthorized=okhttp3.Response.Builder().request(okhttp3.Request.Builder().url("https://example.invalid/")
+            .header("Authorization","Bearer legacy-access").header("X-LingoLens-Account","1").build())
+            .protocol(okhttp3.Protocol.HTTP_1_1).code(401).message("Legacy token").build()
+        val authenticator=com.quocdat.lingolens.data.remote.TokenAuthenticator(store,api)
+        assertNull(authenticator.authenticate(null,unauthorized));assertNull(store.value);assertEquals(1,refreshCalls)
+        assertEquals(SyncOutcome.PAUSED,engine.run(1));assertEquals(beforeQueue,db.lessonDao().outbox(1,session.id))
+        assertEquals(beforeSession,db.lessonDao().session(1,session.id));assertNotNull(db.learningDao().find(1,"book"))
+        assertNull(authenticator.authenticate(null,unauthorized));assertEquals(1,refreshCalls)
+        signedIn=1;assertEquals(SyncOutcome.COMPLETE,engine.run(1))
+        assertEquals(beforeQueue!!.payloadJson,db.lessonDao().outbox(1,session.id)!!.payloadJson)
+        assertEquals("CONFIRMED",db.lessonDao().outbox(1,session.id)!!.state);assertEquals(1,server.size)
+        assertNotNull(db.learningDao().find(1,"book"))
+    }
     @Test fun `unexpected acknowledgement never confirms another UUID`()=runBlocking {
         val session=enqueue(0);wrongResponse=true
         assertEquals(SyncOutcome.RETRY,engine.run(1));assertEquals("PENDING",db.lessonDao().outbox(1,session.id)?.state);assertNull(db.lessonDao().session(1,session.id)?.serverResultJson)

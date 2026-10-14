@@ -42,6 +42,30 @@ class TokenAuthenticatorTest {
     private fun expired() = Response.Builder().request(Request.Builder().url("https://example.com/")
         .header("Authorization", "Bearer old-access").header("X-LingoLens-Account", "1").build())
         .protocol(Protocol.HTTP_1_1).code(401).message("Expired").build()
+    @Test fun `revoked refresh or legacy access logs out once without an infinite refresh loop`() {
+        for(code in listOf(401,403)){
+            val store=Store();val api=Api().apply{error=retrofit2.HttpException(retrofit2.Response.error<Any>(code,"{\"code\":\"INVALID_TOKEN\"}".toResponseBody()))}
+            val authenticator=TokenAuthenticator(store,api)
+            assertNull(authenticator.authenticate(null,expired()));assertNull(store.value)
+            repeat(3){assertNull(authenticator.authenticate(null,expired()))}
+            assertEquals(1,api.calls.get())
+        }
+    }
+    @Test fun `access rejected for missing identity claim signs out without refresh and retains error body`() {
+        val store=Store();val api=Api()
+        val response=expired().newBuilder().body("{\"code\":\"INVALID_TOKEN\",\"message\":\"Missing userId\"}".toResponseBody()).build()
+        assertNull(TokenAuthenticator(store,api).authenticate(null,response));assertNull(store.value)
+        assertEquals(0,api.calls.get());assertTrue(response.body!!.string().contains("INVALID_TOKEN"))
+    }
+    @Test fun `second unauthorized response logs out current session but cannot clear a newer login`() {
+        val store=Store();val api=Api();val authenticator=TokenAuthenticator(store,api)
+        val retried=expired().newBuilder().priorResponse(expired()).build()
+        assertNull(authenticator.authenticate(null,retried));assertNull(store.value);assertEquals(0,api.calls.get())
+        store.value=StoredSession("old-access","different-refresh","a@example.com","A","new-login")
+        val stale=retried.newBuilder().request(retried.request.newBuilder()
+            .tag(RequestAccount::class.java,RequestAccount("a@example.com","old-login")).build()).build()
+        assertNull(authenticator.authenticate(null,stale));assertEquals("new-login",store.value!!.generation)
+    }
     @Test fun `concurrent expired requests refresh once and reuse rotated credentials`() {
         val store = Store(); val api = Api(); val authenticator = TokenAuthenticator(store, api)
         val start = CountDownLatch(1); val pool = Executors.newFixedThreadPool(2)

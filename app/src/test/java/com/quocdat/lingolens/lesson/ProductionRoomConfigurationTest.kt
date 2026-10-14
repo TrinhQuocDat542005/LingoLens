@@ -12,7 +12,7 @@ class ProductionRoomConfigurationTest {
         assertTrue(builder.contains("Room.databaseBuilder"))
         assertTrue(builder.contains("\"learning.db\""))
         assertTrue(builder.contains(".addMigrations("))
-        for (migration in listOf("MIGRATION_1_2", "MIGRATION_2_3", "MIGRATION_3_4")) assertTrue(migration, builder.contains(migration))
+        for (migration in listOf("MIGRATION_1_2", "MIGRATION_2_3", "MIGRATION_3_4", "MIGRATION_4_5")) assertTrue(migration, builder.contains(migration))
         assertTrue(builder.contains(".build()"))
         sourceRoot.walkTopDown().filter { it.isFile && it.extension == "kt" }.forEach {
             assertFalse(it.path, it.readText().contains("fallbackToDestructiveMigration"))
