@@ -34,4 +34,6 @@ interface ReviewDao {
     @Query("SELECT * FROM ReviewSession WHERE accountId = :accountId AND finishedAt IS NULL ORDER BY startedAt DESC LIMIT 1") suspend fun activeSession(accountId: Long): ReviewSession?
     @Query("SELECT * FROM ReviewSession WHERE accountId = :accountId AND id = :id") suspend fun session(accountId: Long, id: String): ReviewSession?
     @Upsert suspend fun save(session: ReviewSession)
+    @Query("SELECT * FROM ReviewSession WHERE accountId=:accountId AND finishedAt IS NOT NULL AND finishedAt>=:boundary ORDER BY finishedAt,id")
+    suspend fun finishedSessions(accountId:Long,boundary:Long):List<ReviewSession>
 }

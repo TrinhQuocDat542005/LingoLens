@@ -17,7 +17,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 class AppContainer(context: Context) {
-    suspend fun resumeStoredSync() { storage.cachedProfile()?.id?.let(syncScheduler::resume) }
+    @Volatile private var analyticsPaused=false
+    @Volatile private var analyticsAccount:Long?=null
+    suspend fun resumeStoredSync() { storage.cachedProfile()?.id?.let {syncScheduler.resume(it);if(!analyticsPaused)analyticsScheduler.resume(it)} }
     private val learningDatabase = androidx.room.Room.databaseBuilder(context.applicationContext,
         com.quocdat.lingolens.data.local.LearningDatabase::class.java, "learning.db")
         .addMigrations(com.quocdat.lingolens.data.local.LearningDatabase.MIGRATION_1_2,
@@ -27,7 +29,8 @@ class AppContainer(context: Context) {
     val syncScheduler = com.quocdat.lingolens.sync.SyncScheduler(context)
     val learningRepository = com.quocdat.lingolens.data.repository.LearningRepository(learningDatabase, onCommitted = syncScheduler::schedule)
     val syncDatabase get() = learningDatabase
-    val reviewRepository = com.quocdat.lingolens.data.repository.ReviewRepository(learningDatabase, scheduleSync = syncScheduler::schedule)
+    val reviewRepository = com.quocdat.lingolens.data.repository.ReviewRepository(learningDatabase, scheduleSync = syncScheduler::schedule,
+        onFinished={analyticsRepository.onReviewFinished(it)})
     private val gson = Gson()
     private val storage = SessionStorage(context)
     private val baseUrl = BuildConfig.API_BASE_URL
@@ -66,8 +69,33 @@ class AppContainer(context: Context) {
         authApi = authenticatedRetrofit.create(AuthApi::class.java),
         userApi = authenticatedRetrofit.create(UserApi::class.java),
         storage = storage,
-        gson = gson
+        gson = gson,
+        beforeLogout={pauseAnalytics(it)}
     )
+
+    val analyticsScheduler=com.quocdat.lingolens.analytics.AnalyticsScheduler(context)
+    val analyticsRepository=com.quocdat.lingolens.analytics.AnalyticsRepository(learningDatabase,
+        com.quocdat.lingolens.analytics.RemoteAnalyticsGateway(authenticatedRetrofit.create(com.quocdat.lingolens.analytics.AnalyticsApi::class.java)),
+        identity={id->analyticsIdentity(id)},version=BuildConfig.VERSION_NAME,schedule=analyticsScheduler::schedule,cancel=analyticsScheduler::cancel)
+    private suspend fun analyticsIdentity(id:Long):String? {
+        if(analyticsPaused)return null
+        val before=storage.current() ?: return null
+        if(storage.cachedProfile()?.id!=id || storage.current()!=before)return null
+        return before.generation ?: before.refreshToken
+    }
+    fun pauseAnalytics(account:Long?=analyticsAccount){analyticsPaused=true;account?.let(analyticsScheduler::cancel);analyticsAccount=null}
+    suspend fun activateAnalytics(account:Long,foreground:com.quocdat.lingolens.analytics.AnalyticsForeground?){
+        analyticsAccount?.takeIf{it!=account}?.let(analyticsScheduler::cancel)
+        analyticsAccount=account;analyticsPaused=false
+        analyticsRepository.bestEffort{analyticsRepository.prune(account)}
+        analyticsRepository.bestEffort{analyticsRepository.initialize(account)}
+        analyticsRepository.bestEffort{analyticsRepository.recover(account)}
+        captureForeground(foreground);analyticsScheduler.resume(account)
+    }
+    suspend fun captureForeground(foreground:com.quocdat.lingolens.analytics.AnalyticsForeground?){
+        if(foreground==null)return
+        storage.cachedProfile()?.id?.let{id->analyticsRepository.bestEffort{analyticsRepository.capture(id,"app_open",foreground.id,foreground.startedAt)}}
+    }
 
     val recognitionRepository = RecognitionRepository(
         api = authenticatedRetrofit.create(RecognitionApi::class.java),
@@ -84,7 +112,8 @@ class AppContainer(context: Context) {
         com.quocdat.lingolens.lesson.RemotePackGateway(authenticatedRetrofit.create(com.quocdat.lingolens.lesson.PackApi::class.java)),
         isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id },scheduleSync = syncScheduler::schedule)
     val lessonSessionRepository = com.quocdat.lingolens.lesson.LessonSessionRepository(learningDatabase,contentPackRepository,
-        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id },scheduleSync = syncScheduler::schedule)
+        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id },scheduleSync = syncScheduler::schedule,
+        onStarted={analyticsRepository.onLessonStarted(it)},onCompleted={id,session->analyticsRepository.onLessonCompleted(id,session)})
     val syncEngine = com.quocdat.lingolens.sync.SyncEngine(learningDatabase,
         authenticatedRetrofit.create(com.quocdat.lingolens.sync.SyncApi::class.java),
         isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id })

@@ -113,4 +113,16 @@ class TokenAuthenticatorTest {
         store.value=StoredSession("a-access","a-refresh","a@example.com","A");store.id=1
         client.newCall(request).execute().close();assertEquals(1,dispatched);assertEquals("Bearer a-access",bearer)
     }
+    @Test fun `account switch between profile check and token read cannot dispatch A with B token`() {
+        var value:StoredSession?=StoredSession("a","ar","a@example.invalid","A")
+        val store=object:CredentialStore {
+            override suspend fun current()=value
+            override suspend fun cachedProfile():UserProfileDto? {value=StoredSession("b","br","b@example.invalid","B");return UserProfileDto(1,"a@example.invalid","A","A1",0,5,emptyList())}
+            override suspend fun saveRefreshed(expected:StoredSession,tokens:TokenDto)=false
+            override suspend fun clearIfCurrent(expected:StoredSession){}
+        }
+        var sent=0;val client=OkHttpClient.Builder().addInterceptor(AuthInterceptor(store)).addInterceptor{chain->sent++;Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK").body("{}".toResponseBody()).build()}.build()
+        try{client.newCall(Request.Builder().url("http://localhost/").header("X-LingoLens-Account","1").build()).execute().close();fail("Identity race must stop transport")}catch(_:IOException){}
+        assertEquals(0,sent)
+    }
 }

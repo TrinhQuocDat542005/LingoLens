@@ -13,7 +13,8 @@ class AuthRepository(
     private val authApi: AuthApi,
     private val userApi: UserApi,
     private val storage: SessionStorage,
-    private val gson: Gson
+    private val gson: Gson,
+    private val beforeLogout:(Long)->Unit={}
 ) {
     val session: Flow<com.quocdat.lingolens.data.local.StoredSession?> = storage.session
 
@@ -58,6 +59,7 @@ class AuthRepository(
     suspend fun logout(): Result<Unit> {
         val session = storage.current()
         return try {
+            storage.cachedProfile()?.id?.let(beforeLogout)
             if (session != null) authApi.logout(LogoutRequest(session.refreshToken))
             Result.success(Unit)
         } catch (error: kotlinx.coroutines.CancellationException) { throw error

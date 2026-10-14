@@ -19,9 +19,11 @@ data class RequestAccount(val email: String, val generation: String? = null)
 class AuthInterceptor(private val storage: CredentialStore) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val session = runBlocking {
+            val before = storage.current()
             val expected = chain.request().header("X-LingoLens-Account")?.toLongOrNull()
             if (expected != null && storage.cachedProfile()?.id != expected) throw IOException("Sync account changed")
-            storage.current()
+            if (storage.current() != before) throw IOException("Session changed before request dispatch")
+            before
         }
         val request = if (session == null || session.accessToken.isBlank()) chain.request() else chain.request().newBuilder()
             .header("Authorization", "Bearer ${session.accessToken}")
