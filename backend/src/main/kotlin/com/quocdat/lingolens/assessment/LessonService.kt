@@ -11,7 +11,8 @@ import java.time.Instant
 import java.util.UUID
 
 @Service
-class LessonService(private val jdbc: JdbcTemplate, private val mapper: ObjectMapper) {
+class LessonService(private val jdbc: JdbcTemplate, private val mapper: ObjectMapper,
+    private val events:org.springframework.context.ApplicationEventPublisher) {
     @Transactional(readOnly=true)
     fun courseState(account:Long,course:UUID):LessonCourseSnapshot {
         checkRequest(jdbc.queryForObject("SELECT count(*) FROM courses WHERE id=? AND status IN ('PUBLISHED','ARCHIVED')",Int::class.java,course)!! == 1,"Course unavailable")
@@ -76,6 +77,7 @@ class LessonService(private val jdbc: JdbcTemplate, private val mapper: ObjectMa
                     val grade=result(account,request.id)
                     applyProgress(account,row["lesson_id"] as UUID,request.id,grade.scorePercent,grade.passed,Timestamp.from(Instant.now()))
                     jdbc.update("UPDATE lesson_attempts SET confirmation_status='CONFIRMED' WHERE id=?",request.id)
+                    if(grade.passed)events.publishEvent(com.quocdat.lingolens.analytics.LessonConfirmedEvent(account,request.id))
                 }
             }
             return result(account,request.id)
@@ -94,7 +96,10 @@ class LessonService(private val jdbc: JdbcTemplate, private val mapper: ObjectMa
         val now=Timestamp.from(Instant.now())
         jdbc.update("INSERT INTO lesson_attempts(id,user_id,lesson_revision_id,mode,score_percent,passed,submitted_offline,client_completed_at,received_at,request_hash,confirmation_status) VALUES (?,?,?,?,?,?,?,?,?,?,?)",request.id,account,request.lessonRevisionId,request.mode,grade.scorePercent,grade.passed,request.submittedOffline,Timestamp(request.clientCompletedAt),now,hash,if(confirmed) "CONFIRMED" else "WAITING_PREREQUISITE")
         grade.marks.forEach { mark -> jdbc.update("INSERT INTO attempt_answers VALUES (?,?,?,CAST(? AS JSONB),?,?)",request.id,mark.questionId,request.lessonRevisionId,mapper.writeValueAsString(mapOf("optionKey" to mark.optionKey)),mark.correct,mark.awardedWeight) }
-        if (request.mode=="LESSON" && confirmed) applyProgress(account,row["lesson_id"] as UUID,request.id,grade.scorePercent,grade.passed,now)
+        if (request.mode=="LESSON" && confirmed) {
+            applyProgress(account,row["lesson_id"] as UUID,request.id,grade.scorePercent,grade.passed,now)
+            if(grade.passed)events.publishEvent(com.quocdat.lingolens.analytics.LessonConfirmedEvent(account,request.id))
+        }
         return result(account,request.id)
     }
     private fun applyProgress(account:Long,lesson:UUID,attempt:UUID,score:Int,passed:Boolean,now:Timestamp) {

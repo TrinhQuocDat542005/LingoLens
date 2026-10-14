@@ -63,6 +63,9 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    providers.gradleProperty("junitRandomSeed").orNull?.let {
+        systemProperty("junit.jupiter.execution.order.random.seed", it)
+    }
 }
 
 tasks.named<Test>("test") {

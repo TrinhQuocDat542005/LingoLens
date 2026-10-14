@@ -655,6 +655,8 @@ Chủ dự án cho thực hiện liên tục tuần 7 sau gate/PR tuần 6, khô
 
 ## 16. [BỔ SUNG ĐÃ DUYỆT — TUẦN8] JWT trước, analytics/Room/topic sau
 
+**[CẬP NHẬT — checkpoint consent/batch]** Chi tiết API, consent generation, source dedupe, query D1/D7 và V15 tại [week8-analytics-contract.md](week8-analytics-contract.md). V15 chỉ thêm consent và analytics; V1–V14 giữ nguyên. Room vẫn v4 tại checkpoint này. Lệnh sao lưu/khôi phục trước rollout tại [server-database-backup.md](server-database-backup.md); chưa chạy trên database mục tiêu.
+
 Chủ dự án chọn1A/2A/3A/4A/5A/6B và các điều chỉnh tại [week8-approved-contracts.md](week8-approved-contracts.md), thay đề xuất tương ứng trong week8-plan-draft.md. Bước JWT trên branch mới từ tuần7: stable userId claim, legacy access bị từ chối; refresh opaque giữ FK/hash nhưng thu hồi trước rollout bằng migrationV14 một lần để login lại. Tests rộng auth/profile/roles/sync/curriculum/pack, deleted identity/reregister sameemail, queue không chuyển identity; toàn bộ regression/lint38/builds đạt mới commit và dừng chờ chủ dự án.
 
 Sau checkpoint: schema analytics/consent/batch→Roomv5→camera–topic→báo cáo/dừng. REVIEWED import chỉ làm khi chủ dự án cung cấp người soạn, người duyệt khác, ngày duyệt/checksum/biên bản; chưa có thì bỏ qua bước1, giữ DEMO là DEMO và production guard, cho phép công việc độc lập tiến hành. Điều chỉnh này thay gate thời điểm trước tuần8 đã ghi ở các mục lịch sử; không bỏ gate REVIEWED trước release. Analytics là phần cắt đầu tiên nếu thời gian căng và phải báo phần chưa làm.

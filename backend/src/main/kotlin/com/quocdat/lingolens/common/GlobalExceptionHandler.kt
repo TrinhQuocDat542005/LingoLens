@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+    @ExceptionHandler(com.quocdat.lingolens.analytics.AnalyticsRequestException::class)
+    fun handleAnalytics(ex: com.quocdat.lingolens.analytics.AnalyticsRequestException) =
+        ResponseEntity.status(ex.status).body(ApiError(code=ex.code,message=ex.message ?: "Analytics request failed"))
     @ExceptionHandler(com.quocdat.lingolens.assessment.LessonRequestException::class)
     fun handleLesson(ex: com.quocdat.lingolens.assessment.LessonRequestException) =
         ResponseEntity.status(ex.status).body(ApiError(code=ex.code,message=ex.message ?: "Lesson request failed"))

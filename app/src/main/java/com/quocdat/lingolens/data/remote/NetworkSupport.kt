@@ -14,7 +14,7 @@ import okhttp3.Route
 import retrofit2.HttpException
 import java.io.IOException
 
-data class RequestAccount(val email: String)
+data class RequestAccount(val email: String, val generation: String? = null)
 
 class AuthInterceptor(private val storage: CredentialStore) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -25,7 +25,7 @@ class AuthInterceptor(private val storage: CredentialStore) : Interceptor {
         }
         val request = if (session == null || session.accessToken.isBlank()) chain.request() else chain.request().newBuilder()
             .header("Authorization", "Bearer ${session.accessToken}")
-            .tag(RequestAccount::class.java, RequestAccount(session.email))
+            .tag(RequestAccount::class.java, RequestAccount(session.email, session.generation))
             .build()
         return chain.proceed(request)
     }
@@ -34,15 +34,26 @@ class AuthInterceptor(private val storage: CredentialStore) : Interceptor {
 class TokenAuthenticator(private val storage: CredentialStore, private val authApi: AuthApi) : Authenticator {
     private val refreshLock = Any()
     override fun authenticate(route: Route?, response: Response): Request? {
-        if (responseCount(response) >= 2) return null
         return synchronized(refreshLock) { runBlocking {
             val session = storage.current() ?: return@runBlocking null
             val originalAccount = response.request.tag(RequestAccount::class.java)
-            if (originalAccount != null && originalAccount.email != session.email) return@runBlocking null
+            if (originalAccount != null && (originalAccount.email != session.email ||
+                originalAccount.generation != session.generation)) return@runBlocking null
             val expected = response.request.header("X-LingoLens-Account")?.toLongOrNull()
             if (expected != null && storage.cachedProfile()?.id != expected) return@runBlocking null
+            if (responseCount(response) >= 2) {
+                if (response.request.header("Authorization") == "Bearer ${session.accessToken}") storage.clearIfCurrent(session)
+                return@runBlocking null
+            }
             if (response.request.header("Authorization") != "Bearer ${session.accessToken}") {
                 return@runBlocking response.request.newBuilder().header("Authorization", "Bearer ${session.accessToken}").build()
+            }
+            val errorCode = runCatching {
+                Gson().fromJson(response.peekBody(4096).string(), ApiErrorDto::class.java)?.code
+            }.getOrNull()
+            if (errorCode in setOf("INVALID_TOKEN", "ACCOUNT_DISABLED")) {
+                storage.clearIfCurrent(session)
+                return@runBlocking null
             }
             try {
                 val refreshed = authApi.refresh(RefreshRequest(session.refreshToken)).data ?: return@runBlocking null

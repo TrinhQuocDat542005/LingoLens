@@ -18,6 +18,9 @@ security:
     refresh-expiration-time: 604800000
 
 app:
+  analytics:
+    retention:
+      enabled: false
   admin:
     bootstrap:
       email: ""
