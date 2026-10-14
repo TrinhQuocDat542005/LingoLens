@@ -59,7 +59,7 @@ class LessonDatabaseMigrationTest {
     }
 
     private fun open(): LearningDatabase = Room.databaseBuilder(context, LearningDatabase::class.java, name)
-        .addMigrations(LearningDatabase.MIGRATION_1_2, LearningDatabase.MIGRATION_2_3, LearningDatabase.MIGRATION_3_4)
+        .addMigrations(LearningDatabase.MIGRATION_1_2, LearningDatabase.MIGRATION_2_3, LearningDatabase.MIGRATION_3_4, LearningDatabase.MIGRATION_4_5)
         .build().also { database = it; it.openHelper.writableDatabase }
 
     private fun snapshotRaw(): Map<String, List<List<String?>>> {
@@ -71,9 +71,9 @@ class LessonDatabaseMigrationTest {
         } } finally { old.close() }
     }
 
-    @Test fun `v3 upgrade retains every legacy row and opens real v4 database`() = runBlocking {
+    @Test fun `v3 upgrade retains every legacy row and opens current database`() = runBlocking {
         fixture(3); val before = snapshotRaw(); val db = open()
-        assertEquals(4, db.openHelper.writableDatabase.version)
+        assertEquals(5, db.openHelper.writableDatabase.version)
         assertEquals(before, snapshotRaw())
         assertEquals("review-1", db.reviewDao().activeSession(1)?.id)
         assertEquals(listOf("old-op-1"), db.syncDao().pending(1).map { it.operationId })
@@ -86,7 +86,7 @@ class LessonDatabaseMigrationTest {
     @Test fun `v1 and v2 upgrades preserve original words events cache and outbox`() = runBlocking {
         for (version in 1..2) {
             fixture(version); val db = open()
-            assertEquals(4, db.openHelper.writableDatabase.version)
+            assertEquals(5, db.openHelper.writableDatabase.version)
             assertEquals("{\"owner\":1}", db.learningDao().find(1, "book")?.content)
             assertEquals(52L, db.learningDao().allEvents(2).single().occurredAt)
             assertEquals(222L, db.learningDao().cached("book")?.cachedAt)

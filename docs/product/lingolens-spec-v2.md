@@ -655,6 +655,8 @@ Chủ dự án cho thực hiện liên tục tuần 7 sau gate/PR tuần 6, khô
 
 ## 16. [BỔ SUNG ĐÃ DUYỆT — TUẦN8] JWT trước, analytics/Room/topic sau
 
+**[CẬP NHẬT — Room v5]** Storage checkpoint thêm AnalyticsConsentState/AnalyticsOutbox theo account và TopicCache/TopicVocabularyCache công khai dùng chung, đúng phạm vi đã duyệt. Chỉ thêm bảng/index, giữ nguyên 12 bảng cũ và JSON export1–4; schema5 do Room compiler tạo. MIGRATION_4_5 đăng ký trong AppContainer, không destructive fallback. Các đường1/2/3/4→5, snapshot hai account đủ queues/sessions, rollback migration/reopen/FK/schema guard đã đạt; đủ gate141 Android/48 unit/70 PostgreSQL/lint38/admin/APK. Bằng chứng và giới hạn thiết bị tại [week8-room-v5.md](../portfolio/week8-room-v5.md). Dừng checkpoint trước analytics Android consent/worker/hooks và camera–topic; chưa UI/hooks trong bước storage.
+
 **[CẬP NHẬT — checkpoint consent/batch]** Chi tiết API, consent generation, source dedupe, query D1/D7 và V15 tại [week8-analytics-contract.md](week8-analytics-contract.md). V15 chỉ thêm consent và analytics; V1–V14 giữ nguyên. Room vẫn v4 tại checkpoint này. Lệnh sao lưu/khôi phục trước rollout tại [server-database-backup.md](server-database-backup.md); chưa chạy trên database mục tiêu.
 
 Chủ dự án chọn1A/2A/3A/4A/5A/6B và các điều chỉnh tại [week8-approved-contracts.md](week8-approved-contracts.md), thay đề xuất tương ứng trong week8-plan-draft.md. Bước JWT trên branch mới từ tuần7: stable userId claim, legacy access bị từ chối; refresh opaque giữ FK/hash nhưng thu hồi trước rollout bằng migrationV14 một lần để login lại. Tests rộng auth/profile/roles/sync/curriculum/pack, deleted identity/reregister sameemail, queue không chuyển identity; toàn bộ regression/lint38/builds đạt mới commit và dừng chờ chủ dự án.
