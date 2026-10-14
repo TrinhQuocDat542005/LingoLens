@@ -20,6 +20,11 @@ interface AnalyticsDao {
     @Query("SELECT * FROM AnalyticsConsentState WHERE accountId=:accountId") suspend fun consent(accountId:Long):AnalyticsConsentState?
     @Query("SELECT * FROM AnalyticsConsentState WHERE accountId=:accountId") fun observeConsent(accountId:Long):kotlinx.coroutines.flow.Flow<AnalyticsConsentState?>
     @Insert suspend fun enqueue(event:AnalyticsOutbox)
+    @Update suspend fun update(event:AnalyticsOutbox)
+    @Query("SELECT * FROM AnalyticsOutbox WHERE accountId=:accountId AND eventId=:eventId") suspend fun event(accountId:Long,eventId:String):AnalyticsOutbox?
+    @Query("DELETE FROM AnalyticsOutbox WHERE accountId=:accountId") suspend fun purge(accountId:Long)
+    @Query("DELETE FROM AnalyticsOutbox WHERE accountId=:accountId AND eventId=:eventId") suspend fun remove(accountId:Long,eventId:String)
+    @Query("DELETE FROM AnalyticsOutbox WHERE accountId=:accountId AND (queuedAt<=:cutoff OR occurredAt<:cutoff)") suspend fun prune(accountId:Long,cutoff:Long)
     @Query("SELECT * FROM AnalyticsOutbox WHERE accountId=:accountId ORDER BY queuedAt,eventId") suspend fun events(accountId:Long):List<AnalyticsOutbox>
     @Query("DELETE FROM AnalyticsConsentState WHERE accountId=:accountId") suspend fun deleteConsent(accountId:Long)
 }

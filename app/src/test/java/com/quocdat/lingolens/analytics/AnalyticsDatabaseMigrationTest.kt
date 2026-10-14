@@ -143,12 +143,13 @@ class AnalyticsDatabaseMigrationTest {
         val next=schema(5)["entities"].asJsonArray.associateBy{it.asJsonObject["tableName"].asString}
         assertEquals(old.keys+newTables,next.keys);old.forEach{(table,entity)->assertEquals(table,entity,next[table])}
     }
-    @Test fun `fixture schemas one through four remain byte identical to committed exports after LF normalization`() {
+    @Test fun `fixture schemas one through five remain byte identical to committed exports after LF normalization`() {
         val hashes=listOf("f6e3420d8ba5d426c1452edbca3e4c14b90f443491548d6a0f725bdcb5cb7bee",
             "6c9869afd4800e898e44f02c5a99c29f6b313fdd6f75ab322eac579fd31a1508",
             "c952d5e1d72460b2c8ea51229b67eaaf51ef73dc2660e6916a5bdb5b063f15e4",
-            "caaa6d5e59c5e75837817e2b59cc721be29a6911683c64d96f3bea39f5a74f10")
-        for(version in 1..4){
+            "caaa6d5e59c5e75837817e2b59cc721be29a6911683c64d96f3bea39f5a74f10",
+            "7f39cf91829490a33762abc9c93d69638be5f1284a1a413cbb1214b5ba1fd455")
+        for(version in 1..5){
             val text=requireNotNull(javaClass.getResourceAsStream("/com.quocdat.lingolens.data.local.LearningDatabase/$version.json"))
                 .bufferedReader(Charsets.UTF_8).use{it.readText()}.replace("\r\n","\n")
             val hash=java.security.MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)).joinToString(""){"%02x".format(it)}

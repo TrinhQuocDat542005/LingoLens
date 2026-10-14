@@ -1,5 +1,7 @@
 # Tuần 8 — hợp đồng đã duyệt và thứ tự thực hiện
 
+**Cập nhật phạm vi 14/10/2026:** chuyển sang portfolio GitHub, không phát hành Google Play. Quyết định này thay các yêu cầu release cũ: bỏ web deletion/privacy chi tiết/Data Safety/cam kết backup-log/independent content review/preflight database mục tiêu; giữ DEMO có công bố trong README. Giữ analytics retention 90 ngày đã triển khai, camera Đồ vật và xóa account trong app có mật khẩu/FK/token/Room isolation. Hai tính năng cuối chỉ lập kế hoạch sau khi analytics Android đạt gate và commit; chờ chủ dự án duyệt trước code.
+
 Chủ dự án duyệt 1A/2A/3A/4A/5A/6B, điều chỉnh sau bản week8-plan-draft.md. Tài liệu này thay những đề xuất tương ứng trong bản nháp; không coi nháp là hợp đồng đã duyệt.
 
 - Nhánh mới từ feature/question-types-tts; không merge main/PR#4, không mở PR tuần7 cho đến khi chủ dự án yêu cầu.

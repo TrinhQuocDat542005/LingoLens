@@ -35,7 +35,10 @@ fun AppNavigation() {
         SessionState.Loading -> SplashScreen()
         SessionState.SignedOut -> AuthNavigation(authViewModel)
         is SessionState.SignedIn -> key(session.profile.id) {
-            LaunchedEffect(session.profile.id) { application.container.syncScheduler.resume(session.profile.id) }
+            LaunchedEffect(session.profile.id) {
+                application.container.syncScheduler.resume(session.profile.id)
+                application.container.activateAnalytics(session.profile.id,application.analyticsForeground.current())
+            }
             CompositionLocalProvider(com.quocdat.lingolens.ui.learning.LocalLearningSession provides
                 com.quocdat.lingolens.ui.learning.LearningSession(application.container, session.profile)) {
                 MainNavigation(authViewModel, session.profile)
@@ -56,6 +59,7 @@ private fun AuthNavigation(viewModel: AuthViewModel) {
 @Composable
 private fun MainNavigation(viewModel: AuthViewModel, profile: com.quocdat.lingolens.data.remote.dto.UserProfileDto) {
     val navController = rememberNavController()
+    com.quocdat.lingolens.analytics.AnalyticsConsentHost(profile.id)
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination
     val items = listOf(BottomNavItem.Home, BottomNavItem.Camera, BottomNavItem.MyWords, BottomNavItem.Stats, BottomNavItem.Settings)
     val showBottomBar = currentDestination?.route != Screen.Result.route && currentDestination?.route != Screen.Camera.route && currentDestination?.route != "review" && currentDestination?.route != "lesson"

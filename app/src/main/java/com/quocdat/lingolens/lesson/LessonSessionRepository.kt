@@ -11,8 +11,10 @@ import java.util.UUID
 
 class LessonSessionRepository(private val db:LearningDatabase,private val packs:ContentPackRepository,
     private val isSignedIn:suspend(Long)->Boolean,private val gson:Gson=Gson(),private val clock:()->Long=System::currentTimeMillis,
-    private val scheduleSync:(Long)->Unit={},private val afterEnqueue:()->Unit={}) {
-    suspend fun start(account:Long,revision:String,mode:String="LESSON"):LessonSession=db.withTransaction {
+    private val scheduleSync:(Long)->Unit={},private val afterEnqueue:()->Unit={},
+    private val onStarted:suspend(LessonSession)->Unit={},private val onCompleted:suspend(Long,String)->Unit={_,_->}) {
+    suspend fun start(account:Long,revision:String,mode:String="LESSON"):LessonSession {
+        val result=db.withTransaction {
         signedIn(account);require(mode in setOf("LESSON","PRACTICE"))
         val pack=pack(account,revision)
         check(db.lessonDao().curriculum(account,pack.courseId)?.enrollmentStatus=="ACTIVE"){"Enroll online before starting lessons"}
@@ -20,6 +22,8 @@ class LessonSessionRepository(private val db:LearningDatabase,private val packs:
         val now=clock();val session=LessonSession(account,UUID.randomUUID().toString(),pack.lessonId,revision,mode,
             gson.toJson(pack.questions.map{it.id}),0,"{}","ANSWERING",now,now)
         db.lessonDao().saveSession(session);signedIn(account);session
+        }
+        analytics{onStarted(result)};return result
     }
     suspend fun resume(account:Long,id:String):LessonSession {
         signedIn(account)
@@ -62,8 +66,9 @@ class LessonSessionRepository(private val db:LearningDatabase,private val packs:
             db.lessonDao().enqueue(LessonAttemptOutbox(account,session.id,session.id,body,hash,"PENDING",now,0))
             afterEnqueue();signedIn(account);body
         }
-        scheduleSync(account);return payload
+        scheduleSync(account);analytics{onCompleted(account,id)};return payload
     }
+    private suspend fun analytics(action:suspend()->Unit){try{action()}catch(error:kotlinx.coroutines.CancellationException){throw error}catch(_:Exception){}}
     private suspend fun pack(account:Long,revision:String):LessonPack = packs.parse(checkNotNull(db.lessonDao().pack(account,revision)){"Complete pack required"}.contentJson)
     suspend fun canOpen(account:Long,target:LessonPack):Boolean {
         signedIn(account)

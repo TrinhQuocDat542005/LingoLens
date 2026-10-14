@@ -1,5 +1,11 @@
 # LingoLens — Đặc tả sản phẩm và kiến trúc v2
 
+## Điều chỉnh phạm vi portfolio — 14/10/2026
+
+Quyết định mới của chủ dự án có ưu tiên trên các gate phát hành bên dưới: dự án dùng để trình bày trên GitHub, không phát hành Google Play. Bỏ trang web xóa tài khoản công khai, trang privacy chi tiết, cam kết retention backup/log, Data Safety, quy trình người rà soát nội dung độc lập và preflight trên database mục tiêu. Nội dung giữ DEMO, ghi rõ trong README; không đổi nhãn dữ liệu thành REVIEWED. Retention analytics 90 ngày đã triển khai vẫn giữ, không mở rộng thành cam kết backup/log.
+
+Giữ camera–chủ đề Đồ vật (book/bottle/phone) và một luồng xóa tài khoản trong app: xác nhận mật khẩu, xóa đúng dữ liệu account theo FK, thu hồi token, dọn Room theo account; test không mồ côi, rollback và không ảnh hưởng account khác. Chưa triển khai hai phần này. Không sửa V1–V15/schema Room 1–5, không destructive fallback, không merge hoặc viết lại lịch sử git khi chưa được phép.
+
 **Trạng thái cập nhật 13/10/2026:** tuần7 được duyệt báo cáo, branch đã push, chưa mở PR; PR#4 giữ mở/chưa merge. Chủ dự án duyệt kế hoạch tuần8 với điều chỉnh tại mục16: làm JWT trước rồi dừng báo cáo, chờ tiếp tục. Không tự làm tuần9 hoặc mở/merge PR.
 
 **Căn cứ:** đặc tả ban đầu trong cuộc trò chuyện, đối chiếu migration V1–V8, Room v3 và quyết định **1A, 2A, 3A, 4A, 5A, 6A**, cùng các bổ sung của chủ dự án. Tài liệu này là đặc tả đích, không phải báo cáo tính năng đã triển khai.
@@ -457,6 +463,8 @@ Tuần là khung dự kiến, không thay tiêu chí nghiệm thu. Không tăng 
 | 9 | Hoàn tất nội dung còn lại; nghiệm thu cả vòng; xem lại streak và thêm hợp lệ lesson completion; hoàn thiện luồng xóa trong app/web, privacy/Data Safety chuẩn bị release | 18 bài, 90–120 từ, 150–180 câu đã duyệt; không giảm streak cũ, chưa có hạn 72h; hồi quy offline/timezone/security; release gate xóa tài khoản đạt; không còn chỗ lưu/giữ dữ liệu chưa được quyết định |
 
 Analytics/camera có thể hoàn tất ở tuần 9 nếu chưa đạt tuần 8; không mở rộng phạm vi. Xóa tài khoản/privacy là công việc riêng có dự toán sau khi chốt xác minh và backup/log, không xem là checkbox tài liệu. Nếu chưa đủ năng lực/thời gian thì kéo dài chặng nghiệm thu; không bỏ release gate để giữ lịch tuần.
+
+**[BỔ SUNG — backlog tuần 9, 14/10/2026]** `ContentPackRepository.ready()` hiện ném lỗi khi manifest trong Room hỏng và chưa có phục hồi. Đề xuất: khi parse thất bại, coi pack chưa sẵn sàng và cho tải lại có kiểm tra manifest/checksum; không xóa session, đáp án hoặc hàng đợi. Cần test cache hỏng và giữ nguyên dữ liệu học trước khi triển khai. Chưa sửa production ở tuần 8.
 
 ### 10.1. [BỔ SUNG] Workstream nội dung riêng và đệm
 
