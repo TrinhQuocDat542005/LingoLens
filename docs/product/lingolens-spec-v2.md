@@ -2,6 +2,8 @@
 
 ## Điều chỉnh phạm vi portfolio — 14/10/2026
 
+**Migration bổ sung camera:** V16 chỉ thêm topic Đồ vật và mapping book/bottle/phone vào bảng đã có. Không sửa V1–V15 hoặc Room schemas 1–5; test exact migration versions/checksum/nâng cấp giữ dữ liệu cũ trước commit.
+
 Quyết định mới của chủ dự án có ưu tiên trên các gate phát hành bên dưới: dự án dùng để trình bày trên GitHub, không phát hành Google Play. Bỏ trang web xóa tài khoản công khai, trang privacy chi tiết, cam kết retention backup/log, Data Safety, quy trình người rà soát nội dung độc lập và preflight trên database mục tiêu. Nội dung giữ DEMO, ghi rõ trong README; không đổi nhãn dữ liệu thành REVIEWED. Retention analytics 90 ngày đã triển khai vẫn giữ, không mở rộng thành cam kết backup/log.
 
 Giữ camera–chủ đề Đồ vật (book/bottle/phone) và một luồng xóa tài khoản trong app: xác nhận mật khẩu, xóa đúng dữ liệu account theo FK, thu hồi token, dọn Room theo account; test không mồ côi, rollback và không ảnh hưởng account khác. Chưa triển khai hai phần này. Không sửa V1–V15/schema Room 1–5, không destructive fallback, không merge hoặc viết lại lịch sử git khi chưa được phép.

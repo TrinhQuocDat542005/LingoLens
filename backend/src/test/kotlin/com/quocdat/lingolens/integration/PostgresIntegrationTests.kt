@@ -171,7 +171,9 @@ class PostgresIntegrationTests {
     @Test fun `all migrations apply and seed vocabulary on PostgreSQL`() {
         MigrationChecksums.assertCommittedSourcesUnchanged()
         org.flywaydb.core.Flyway.configure().dataSource(jdbc.dataSource!!).load().validate()
-        assertEquals((1..15).map(Int::toString),jdbc.queryForList("SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank",String::class.java))
+        assertEquals((1..16).map(Int::toString),jdbc.queryForList("SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank",String::class.java))
+        com.quocdat.lingolens.topic.TopicMigrationTests.assertTopicSourceUnchanged()
+        assertTrue(jdbc.queryForObject("SELECT checksum IS NOT NULL FROM flyway_schema_history WHERE version='16' AND success",Boolean::class.java)!!)
         com.quocdat.lingolens.auth.IdentityTokenRolloutMigrationTests.assertRolloutSourceUnchanged()
         com.quocdat.lingolens.analytics.AnalyticsMigrationTests.assertAnalyticsSourcesUnchanged()
         assertTrue(jdbc.queryForObject("SELECT checksum IS NOT NULL FROM flyway_schema_history WHERE version='14' AND success",Boolean::class.java)!!)

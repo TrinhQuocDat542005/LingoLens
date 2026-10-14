@@ -114,6 +114,8 @@ fun ResultScreen(navController: NavController, word: String, imageUri: String? =
     var showReportDialog by remember { mutableStateOf(false) }
     val session = LocalLearningSession.current
     val scope = rememberCoroutineScope()
+    val topics by remember(selectedWord){container.topicRepository.forWord(selectedWord.orEmpty())}.collectAsState(initial=emptyList())
+    LaunchedEffect(session.profile.id){container.topicRepository.refresh()}
     var lookupAttempt by remember { mutableStateOf(0) }
     var loading by remember { mutableStateOf(false) }
     var lookupMessage by remember { mutableStateOf<String?>(null) }
@@ -201,6 +203,7 @@ fun ResultScreen(navController: NavController, word: String, imageUri: String? =
             lookupMessage?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             if (selectedWord != null && !loading) TextButton(onClick = { lookupAttempt++ }) { Text("Làm mới nội dung") }
             learnedWord?.let { WordResultContent(it) }
+            topics.forEach{topic->AssistChip(onClick={navController.navigate(Screen.MyWords.route)},label={Text("Chủ đề: ${topic.title}")})}
 
             if (recognitionState is RecognitionUiState.Success) {
                 RecognitionFeedbackCard(syncState = syncState, onReport = { showReportDialog = true })

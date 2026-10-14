@@ -106,6 +106,8 @@ class AppContainer(context: Context) {
     val vocabularyRepository = com.quocdat.lingolens.data.repository.VocabularyRepository(
         authenticatedRetrofit.create(com.quocdat.lingolens.data.repository.VocabularyApi::class.java),
         learningDatabase, learningRepository)
+    val topicRepository=com.quocdat.lingolens.topic.TopicRepository(learningDatabase,
+        com.quocdat.lingolens.topic.RemoteTopicGateway(authenticatedRetrofit.create(com.quocdat.lingolens.topic.TopicApi::class.java)))
     val lessonRepository = com.quocdat.lingolens.lesson.LessonRepository(
         authenticatedRetrofit.create(com.quocdat.lingolens.lesson.LessonApi::class.java))
     val contentPackRepository = com.quocdat.lingolens.lesson.ContentPackRepository(learningDatabase,

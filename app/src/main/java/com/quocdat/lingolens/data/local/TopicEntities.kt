@@ -12,6 +12,11 @@ data class TopicVocabularyCache(val topicId:String,val word:String,val displayOr
 
 @Dao
 interface TopicDao {
+    @Query("SELECT * FROM TopicCache ORDER BY title,id") fun observeTopics():kotlinx.coroutines.flow.Flow<List<TopicCache>>
+    @Query("SELECT t.* FROM TopicCache t JOIN TopicVocabularyCache v ON v.topicId=t.id WHERE v.word=:word ORDER BY t.title") fun forWord(word:String):kotlinx.coroutines.flow.Flow<List<TopicCache>>
+    @Query("SELECT s.* FROM (SELECT * FROM SavedWordEntity WHERE accountId=:accountId) s JOIN TopicVocabularyCache v ON v.word=s.word WHERE v.topicId=:topicId ORDER BY s.savedAt DESC")
+    fun words(accountId:Long,topicId:String):kotlinx.coroutines.flow.Flow<List<SavedWordEntity>>
+    @Query("DELETE FROM TopicCache") suspend fun clear()
     @Upsert suspend fun saveTopic(topic:TopicCache)
     @Upsert suspend fun saveVocabulary(word:TopicVocabularyCache)
     @Query("SELECT * FROM TopicCache WHERE id=:id") suspend fun topic(id:String):TopicCache?

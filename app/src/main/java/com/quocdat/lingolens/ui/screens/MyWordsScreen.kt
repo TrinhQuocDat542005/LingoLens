@@ -34,7 +34,13 @@ fun MyWordsScreen(navController: NavController) {
     val context = LocalContext.current
     val session = LocalLearningSession.current
     val repository = session.container.learningRepository
-    val words by remember(session.profile.id) { repository.words(session.profile.id) }.collectAsState(initial = emptyList())
+    val topicRepository=session.container.topicRepository
+    var selectedTopic by remember(session.profile.id){mutableStateOf<String?>(null)}
+    val topics by remember{topicRepository.topics()}.collectAsState(initial=emptyList())
+    LaunchedEffect(session.profile.id){topicRepository.refresh()}
+    val words by remember(session.profile.id,selectedTopic) {
+        selectedTopic?.let{topicRepository.words(session.profile.id,it)} ?: repository.words(session.profile.id)
+    }.collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
 
     var searchQuery by remember { mutableStateOf("") }
@@ -73,6 +79,10 @@ fun MyWordsScreen(navController: NavController) {
         ) {
             com.quocdat.lingolens.ui.learning.SyncStatusCard()
             com.quocdat.lingolens.ui.learning.ReviewOverviewCard(navController)
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                item {FilterChip(selected=selectedTopic==null,onClick={selectedTopic=null},label={Text("Mọi chủ đề")})}
+                items(topics){topic->FilterChip(selected=selectedTopic==topic.id,onClick={selectedTopic=topic.id},label={Text(topic.title)})}
+            }
             // Search Bar
             OutlinedTextField(
                 value = searchQuery,
