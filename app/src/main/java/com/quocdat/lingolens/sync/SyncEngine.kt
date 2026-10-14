@@ -18,6 +18,7 @@ enum class SyncOutcome { COMPLETE, RETRY, PAUSED, BLOCKED }
 class SyncEngine(private val db: LearningDatabase, private val api: SyncApi,
     private val isSignedIn: suspend (Long) -> Boolean, private val gson: Gson = Gson()) {
     private val mutex = Mutex()
+    suspend fun awaitIdle(){mutex.withLock { Unit }}
     suspend fun bootstrap(accountId: Long) = db.withTransaction {
         if (db.syncDao().account(accountId)?.bootstrapped == true) return@withTransaction
         db.learningDao().allEvents(accountId).forEach { event ->

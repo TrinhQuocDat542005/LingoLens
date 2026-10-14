@@ -38,6 +38,7 @@ class RemoteLessonSyncGateway(private val api:LessonSyncApi):LessonSyncGateway {
 class LessonSyncEngine(private val db:LearningDatabase,private val gateway:LessonSyncGateway,
     private val isSignedIn:suspend(Long)->Boolean,private val gson:Gson=Gson(),private val beforeAcknowledge:()->Unit={}) {
     private val mutex=Mutex()
+    suspend fun awaitIdle(){mutex.withLock { Unit }}
     suspend fun run(account:Long):SyncOutcome=mutex.withLock {
         if(!isSignedIn(account)) return@withLock SyncOutcome.PAUSED
         var retry=false;var blocked=false

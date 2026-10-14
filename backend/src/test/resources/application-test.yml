@@ -18,6 +18,9 @@ security:
     refresh-expiration-time: 604800000
 
 app:
+  deletion:
+    retention:
+      enabled: false
   analytics:
     retention:
       enabled: false

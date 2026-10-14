@@ -22,6 +22,7 @@ class AnalyticsRepository(private val db:LearningDatabase,private val gateway:An
     private val dao=db.analyticsDao()
     private val gson=Gson()
     private val syncMutex=Mutex()
+    suspend fun awaitIdle(){syncMutex.withLock { Unit }}
     companion object {const val VERSION="analytics-v1";const val RETENTION=90L*86400000}
     fun observe(account:Long)=dao.observeConsent(account)
     suspend fun currentState(account:Long)=dao.consent(account)

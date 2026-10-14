@@ -61,6 +61,7 @@ class SecurityConfig(
             .csrf { it.disable() }
             .cors { }
             .authorizeHttpRequests { auth ->
+                auth.requestMatchers(org.springframework.http.HttpMethod.POST,"/api/v1/account-deletion/status").permitAll()
                 auth
                     .requestMatchers(
                         "/api/v1/auth/register",

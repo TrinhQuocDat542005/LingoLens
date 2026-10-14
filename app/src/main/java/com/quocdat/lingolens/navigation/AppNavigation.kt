@@ -31,6 +31,7 @@ sealed class BottomNavItem(val screen: Screen, val title: String, val icon: Imag
 fun AppNavigation() {
     val application = LocalContext.current.applicationContext as LingoLensApplication
     val authViewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory(application.container.authRepository))
+    com.quocdat.lingolens.deletion.DeletionRecoveryHost()
     when (val session = authViewModel.session.collectAsState().value) {
         SessionState.Loading -> SplashScreen()
         SessionState.SignedOut -> AuthNavigation(authViewModel)
