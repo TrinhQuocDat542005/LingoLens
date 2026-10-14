@@ -20,6 +20,11 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 class SyncScheduler(context: Context) {
     private val work = WorkManager.getInstance(context.applicationContext)
     private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+    suspend fun cancel(accountId:Long)=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){
+        work.cancelUniqueWork("sync-now-$accountId").result.get()
+        work.cancelUniqueWork("sync-periodic-$accountId").result.get()
+        Unit
+    }
     fun schedule(accountId: Long) {
         val request = OneTimeWorkRequestBuilder<SyncWorker>().setInputData(workDataOf("accountId" to accountId))
             .setConstraints(network).setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS).build()

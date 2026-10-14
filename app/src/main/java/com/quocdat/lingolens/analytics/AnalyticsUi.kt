@@ -27,6 +27,7 @@ class AnalyticsPromptPreferences(context:Context) {
     private val preferences=context.applicationContext.getSharedPreferences("analytics_ui",Context.MODE_PRIVATE)
     fun seen(account:Long)=preferences.getBoolean("choice-$account",false)
     fun rememberChoice(account:Long){preferences.edit { putBoolean("choice-$account",true) }}
+    fun forget(account:Long){preferences.edit { remove("choice-$account") }}
 }
 
 @Composable

@@ -64,6 +64,7 @@ fun SettingsScreen(navController: NavController, user: UserProfileDto, authViewM
             }
 
             com.quocdat.lingolens.analytics.AnalyticsSettingsCard(user.id)
+            com.quocdat.lingolens.deletion.AccountDeletionCard(user.id)
 
             // Study Settings Card
             Card(

@@ -17,9 +17,11 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 class AppContainer(context: Context) {
+    private val deletingAccounts=java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+    private suspend fun activeAccount(id:Long)=id !in deletingAccounts && storage.current()!=null && storage.cachedProfile()?.id==id
     @Volatile private var analyticsPaused=false
     @Volatile private var analyticsAccount:Long?=null
-    suspend fun resumeStoredSync() { storage.cachedProfile()?.id?.let {syncScheduler.resume(it);if(!analyticsPaused)analyticsScheduler.resume(it)} }
+    suspend fun resumeStoredSync() { storage.cachedProfile()?.id?.takeIf{it !in deletingAccounts}?.let {syncScheduler.resume(it);if(!analyticsPaused)analyticsScheduler.resume(it)} }
     private val learningDatabase = androidx.room.Room.databaseBuilder(context.applicationContext,
         com.quocdat.lingolens.data.local.LearningDatabase::class.java, "learning.db")
         .addMigrations(com.quocdat.lingolens.data.local.LearningDatabase.MIGRATION_1_2,
@@ -78,7 +80,7 @@ class AppContainer(context: Context) {
         com.quocdat.lingolens.analytics.RemoteAnalyticsGateway(authenticatedRetrofit.create(com.quocdat.lingolens.analytics.AnalyticsApi::class.java)),
         identity={id->analyticsIdentity(id)},version=BuildConfig.VERSION_NAME,schedule=analyticsScheduler::schedule,cancel=analyticsScheduler::cancel)
     private suspend fun analyticsIdentity(id:Long):String? {
-        if(analyticsPaused)return null
+        if(analyticsPaused || id in deletingAccounts)return null
         val before=storage.current() ?: return null
         if(storage.cachedProfile()?.id!=id || storage.current()!=before)return null
         return before.generation ?: before.refreshToken
@@ -97,6 +99,25 @@ class AppContainer(context: Context) {
         storage.cachedProfile()?.id?.let{id->analyticsRepository.bestEffort{analyticsRepository.capture(id,"app_open",foreground.id,foreground.startedAt)}}
     }
 
+    val deletionRepository=com.quocdat.lingolens.deletion.DeletionRepository(
+        com.quocdat.lingolens.deletion.DeletionProofStore(context),
+        com.quocdat.lingolens.deletion.RemoteDeletionGateway(
+            authenticatedRetrofit.create(com.quocdat.lingolens.deletion.DeletionApi::class.java),
+            publicRetrofit.create(com.quocdat.lingolens.deletion.DeletionStatusApi::class.java)),
+        identity={id->if(activeAccount(id)){val current=storage.current();current?.generation ?: current?.refreshToken}else null},
+        stopAndDrain={id->
+            deletingAccounts.add(id)
+            if(storage.cachedProfile()?.id==id)pauseAnalytics(id) else analyticsScheduler.cancel(id)
+            syncScheduler.cancel(id)
+            syncEngine.awaitIdle();lessonSyncEngine.awaitIdle();analyticsRepository.awaitIdle()
+        },
+        cleaner=com.quocdat.lingolens.deletion.AccountDataCleaner(learningDatabase),
+        clearOwnedSession={proof->
+            val current=storage.current()
+            if(current!=null && (storage.cachedProfile()?.id==proof.accountId || current.generation==proof.generation))storage.clearIfCurrent(current)
+            com.quocdat.lingolens.analytics.AnalyticsPromptPreferences(context).forget(proof.accountId)
+        })
+
     val recognitionRepository = RecognitionRepository(
         api = authenticatedRetrofit.create(RecognitionApi::class.java),
         gson = gson,
@@ -106,23 +127,25 @@ class AppContainer(context: Context) {
     val vocabularyRepository = com.quocdat.lingolens.data.repository.VocabularyRepository(
         authenticatedRetrofit.create(com.quocdat.lingolens.data.repository.VocabularyApi::class.java),
         learningDatabase, learningRepository)
+    val topicRepository=com.quocdat.lingolens.topic.TopicRepository(learningDatabase,
+        com.quocdat.lingolens.topic.RemoteTopicGateway(authenticatedRetrofit.create(com.quocdat.lingolens.topic.TopicApi::class.java)))
     val lessonRepository = com.quocdat.lingolens.lesson.LessonRepository(
         authenticatedRetrofit.create(com.quocdat.lingolens.lesson.LessonApi::class.java))
     val contentPackRepository = com.quocdat.lingolens.lesson.ContentPackRepository(learningDatabase,
         com.quocdat.lingolens.lesson.RemotePackGateway(authenticatedRetrofit.create(com.quocdat.lingolens.lesson.PackApi::class.java)),
-        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id },scheduleSync = syncScheduler::schedule)
+        isSignedIn = { id -> activeAccount(id) },scheduleSync = syncScheduler::schedule)
     val lessonSessionRepository = com.quocdat.lingolens.lesson.LessonSessionRepository(learningDatabase,contentPackRepository,
-        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id },scheduleSync = syncScheduler::schedule,
+        isSignedIn = { id -> activeAccount(id) },scheduleSync = syncScheduler::schedule,
         onStarted={analyticsRepository.onLessonStarted(it)},onCompleted={id,session->analyticsRepository.onLessonCompleted(id,session)})
     val syncEngine = com.quocdat.lingolens.sync.SyncEngine(learningDatabase,
         authenticatedRetrofit.create(com.quocdat.lingolens.sync.SyncApi::class.java),
-        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id })
+        isSignedIn = { id -> activeAccount(id) })
     val lessonSyncEngine = com.quocdat.lingolens.lesson.LessonSyncEngine(learningDatabase,
         com.quocdat.lingolens.lesson.RemoteLessonSyncGateway(authenticatedRetrofit.create(com.quocdat.lingolens.lesson.LessonSyncApi::class.java)),
-        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id })
+        isSignedIn = { id -> activeAccount(id) })
     val syncCoordinator = com.quocdat.lingolens.sync.SyncCoordinator(syncEngine::run,lessonSyncEngine::run)
     val lessonStudyRepository = com.quocdat.lingolens.lesson.LessonStudyRepository(learningDatabase,contentPackRepository,lessonSessionRepository,
         com.quocdat.lingolens.lesson.RemoteStudyGateway(authenticatedRetrofit.create(com.quocdat.lingolens.lesson.StudyApi::class.java),
             com.quocdat.lingolens.lesson.RemoteLessonSyncGateway(authenticatedRetrofit.create(com.quocdat.lingolens.lesson.LessonSyncApi::class.java))),
-        isSignedIn = { id -> storage.current() != null && storage.cachedProfile()?.id == id },scheduleSync = syncScheduler::schedule)
+        isSignedIn = { id -> activeAccount(id) },scheduleSync = syncScheduler::schedule)
 }
