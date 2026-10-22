@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="232" viewBox="0 0 1040 232" role="img" aria-labelledby="title desc">
+  <title id="title">LingoLens</title><desc id="desc">Camera discovery. A personal word library. Offline review.</desc>
+  <defs><pattern id="grid" width="26" height="26" patternUnits="userSpaceOnUse"><path d="M26 0H0V26" fill="none" stroke="#ffffff" stroke-opacity=".035"/></pattern></defs>
+  <rect width="1040" height="232" rx="16" fill="#101820"/>
+  <rect width="1040" height="232" rx="16" fill="url(#grid)"/>
+  <rect x="0" y="40" width="4" height="152" rx="2" fill="#6de1c2"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="40" y="57" fill="#6de1c2" font-size="11" font-weight="600" letter-spacing="2">ANDROID  /  LANGUAGE LEARNING</text>
+    <text x="38" y="116" fill="#f3f6f8" font-size="43" font-weight="700" letter-spacing="-1.3">LingoLens</text>
+    <text x="40" y="152" fill="#a8b7c5" font-size="17">Camera discovery. A personal word library. Offline review.</text>
+    <path d="M40 183H94" stroke="#6de1c2" stroke-width="3" stroke-linecap="round"/>
+    
+  <g transform="translate(708 34)" fill="none" stroke="#6de1c2" stroke-width="2">
+    <rect width="86" height="162" rx="15" fill="#15292c" stroke="#345451"/>
+    <path d="M29 10h28" stroke="#789e99" stroke-linecap="round"/>
+    <path d="M18 42v-10h10m30 0h10v10m0 29v10H58m-30 0H18V71"/>
+    <path d="M33 47l20-4v25l-20 4z" fill="#254c46"/>
+    <path d="M33 49v21" stroke="#a0f1d9"/>
+    <path d="M22 108h42m-42 15h27m-27 15h34" stroke="#678c87" stroke-linecap="round"/>
+    <path d="M100 82h24m-6-6l6 6-6 6"/>
+    <rect x="142" y="29" width="112" height="36" rx="8" fill="#1b3735" stroke="#345451"/>
+    <rect x="142" y="78" width="112" height="36" rx="8" fill="#1b3735" stroke="#345451"/>
+    <rect x="142" y="127" width="112" height="25" rx="7" fill="#6de1c2" stroke="none"/>
+  </g>
+  <g font-size="12"><text x="865" y="86" fill="#d8f7ed">book</text><text x="865" y="135" fill="#d8f7ed">bottle</text><text x="865" y="178" fill="#15362e" font-weight="600">Review words</text></g>
+  </g>
+</svg>
